@@ -9,18 +9,15 @@ class Place(models.Model):
 	permalink = models.URLField(max_length=255, editable=False, unique=True)
 	lock_level = models.PositiveSmallIntegerField(default=0)
 	categories = models.CharField(max_length=255)
-	number = models.CharField(max_length= 63, blank=True)
-	street = models.CharField(max_length= 63, blank=True)
-	city = models.CharField(max_length= 63, blank=True)
+	number = models.CharField(max_length=63, blank=True)
+	street = models.CharField(max_length=63, blank=True)
+	city = models.CharField(max_length=63, blank=True)
 	state = models.CharField(max_length=63)
 	country = models.CharField(max_length=63)
-	updated_by = models.CharField(max_length=255, blank=True)
-	updated_on = models.DateTimeField(blank=True)
-	user_report_on = models.DateTimeField(blank=True)
+	updated_by = models.CharField(max_length=63, blank=True)
+	updated_on = models.DateTimeField(blank=True, null=True)
+	user_report_on = models.DateTimeField(blank=True, null=True)
 	is_residential = models.BooleanField(default=False)
 
 	def __str__(self):
-		return ' '.join([self.name, self.venue_id],)
-
-	class Meta:
-		unique_together = ('name', 'number', 'street', 'city', 'state',)
+		return ' '.join(self.venue_id, self.name)

@@ -5,7 +5,7 @@
 #
 
 from bs4 import BeautifulSoup
-import sys, requests, re, os
+import sys, requests, re, os, iso8601
 
 def scrape():
 	# Inital setup
@@ -52,14 +52,25 @@ def scrape():
 			count+= 1
 		venues[count].append(split[i])
 
+
+
 	# ------------------------------------- Export to the Database ------------------------------------- #
 
 	for row in venues:
-		ven_id = re.findall("(?!.*[venues=]).*", row[1])
-		#values = '","'.join(row)
-		#values = '"'+ str(venue_id[0]) +'","'+ values +'"'	# Prepend the Venue ID and add quotes
+		ven_id = re.findall("(?!.*[venues=]).*", row[1])	# Extract the venue ID
 		
-		new = Place(is_verified=False, venue_id=ven_id[0], name=row[0], permalink=row[1], lock_level=row[2], categories=row[3], number=row[4], street=row[5], city=row[6], state=row[7], country=row[8], updated_by=row[9], updated_on=row[10], user_report_on=row[11], is_residential=row[12])
+		# The Django validator is not allowing a blank entry, so add the UNIX epoch time for now
+		if row[10] == "":
+			row[10] = "1970-01-01 00:00:00"
+		if row[11] == "":
+			row[11] = "1970-01-01 00:00:00"
+
+		# Generate a Python datetime object
+		row[10] = iso8601.parse_date(row[10])
+		row[11] = iso8601.parse_date(row[11])
+
+		# Add the row to the database
+		new = Place(venue_id=ven_id[0], name=row[0], permalink=row[1], lock_level=row[2], categories=row[3], number=row[4], street=row[5], city=row[6], state=row[7], country=row[8], updated_by=row[9], updated_on=row[10], user_report_on=row[11], is_residential=row[12])
 		new.save()
 
 # File starts here
