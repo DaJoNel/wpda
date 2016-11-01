@@ -1,5 +1,4 @@
 from __future__ import unicode_literals
-
 from django.db import models
 
 class Place(models.Model):
@@ -19,5 +18,8 @@ class Place(models.Model):
 	user_report_on = models.DateTimeField(blank=True, null=True)
 	is_residential = models.BooleanField(default=False)
 
+	class JSONAPIMeta:
+		resource_name = "places"
+
 	def __str__(self):
-		return ' '.join(self.venue_id, self.name)
+		return ' '.join([self.venue_id, self.name])

@@ -1,6 +1,6 @@
 #
 # Waze Place Discover & Audit (WPDA)
-# Version 0.9.9, 2016-10-30
+# Version 1.0, 2016-10-31
 # Copyright 2016 David Nelson. All rights reserved.
 #
 
