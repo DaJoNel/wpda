@@ -6,11 +6,27 @@
 
 /* jshint ignore:end */
 
-define('wpda-client/adapters/application', ['exports', 'ember-data', 'wpda-client/config/environment', 'ember-simple-auth/mixins/data-adapter-mixin'], function (exports, _emberData, _wpdaClientConfigEnvironment, _emberSimpleAuthMixinsDataAdapterMixin) {
-	exports['default'] = _emberData['default'].JSONAPIAdapter.extend(_emberSimpleAuthMixinsDataAdapterMixin['default'], {
-		host: _wpdaClientConfigEnvironment['default'].host,
-		namespace: 'api',
-		authorizer: 'authorizer:drf-token-authorizer'
+define('wpda-client/adapters/application', ['exports', 'ember-data', 'wpda-client/adapters/drf'], function (exports, _emberData, _wpdaClientAdaptersDrf) {
+	exports['default'] = _emberData['default'].JSONAPIAdapter.extend({});
+	exports['default'] = _wpdaClientAdaptersDrf['default'].extend({
+		addTrailingSlashes: false
+	});
+});
+define('wpda-client/adapters/drf', ['exports', 'ember', 'ember-django-adapter/adapters/drf', 'wpda-client/config/environment'], function (exports, _ember, _emberDjangoAdapterAdaptersDrf, _wpdaClientConfigEnvironment) {
+  exports['default'] = _emberDjangoAdapterAdaptersDrf['default'].extend({
+    host: _ember['default'].computed(function () {
+      return _wpdaClientConfigEnvironment['default'].APP.API_HOST;
+    }),
+
+    namespace: _ember['default'].computed(function () {
+      return _wpdaClientConfigEnvironment['default'].APP.API_NAMESPACE;
+    })
+  });
+});
+define('wpda-client/adapters/place', ['exports', 'ember-data', 'wpda-client/config/environment'], function (exports, _emberData, _wpdaClientConfigEnvironment) {
+	exports['default'] = _emberData['default'].ActiveModelAdapter.extend({
+		namespace: 'api/places',
+		host: _wpdaClientConfigEnvironment['default'].host
 	});
 });
 define('wpda-client/app', ['exports', 'ember', 'wpda-client/resolver', 'ember-load-initializers', 'wpda-client/config/environment'], function (exports, _ember, _wpdaClientResolver, _emberLoadInitializers, _wpdaClientConfigEnvironment) {
@@ -28,56 +44,6 @@ define('wpda-client/app', ['exports', 'ember', 'wpda-client/resolver', 'ember-lo
   (0, _emberLoadInitializers['default'])(App, _wpdaClientConfigEnvironment['default'].modulePrefix);
 
   exports['default'] = App;
-});
-define('wpda-client/authenticators/drf-token-authenticator', ['exports', 'ember', 'ember-simple-auth/authenticators/base', 'todo-ember/config/environment'], function (exports, _ember, _emberSimpleAuthAuthenticatorsBase, _todoEmberConfigEnvironment) {
-	exports['default'] = _emberSimpleAuthAuthenticatorsBase['default'].extend({
-		restore: function restore(data) {
-			return new _ember['default'].RSVP.Promise(function (resolve, reject) {
-				if (!_ember['default'].isEmpty(data.token)) {
-					resolve(data);
-				} else {
-					reject();
-				}
-			});
-		},
-
-		authenticate: function authenticate(username, password) {
-			return new _ember['default'].RSVP.Promise(function (resolve, reject) {
-				_ember['default'].$.ajax({
-					url: _todoEmberConfigEnvironment['default'].host + '/api-auth-token/',
-					type: 'POST',
-					data: JSON.stringify({
-						username: username,
-						password: password
-					}),
-					contentType: 'application/json;charset=utf-8',
-					dataType: 'json'
-				}).then(function (response) {
-					_ember['default'].run(function () {
-						resolve({
-							token: response.token
-						});
-					});
-				}, function (xhr, status, error) {
-					var response = xhr.responseText;
-					_ember['default'].run(function () {
-						reject(response);
-					});
-				});
-			});
-		}
-	});
-});
-define('wpda-client/authorizers/drf-token-authorizer', ['exports', 'ember', 'ember-simple-auth/authorizers/base'], function (exports, _ember, _emberSimpleAuthAuthorizersBase) {
-	exports['default'] = _emberSimpleAuthAuthorizersBase['default'].extend({
-		session: _ember['default'].inject.service('session'),
-
-		authorize: function authorize(sessionData, block) {
-			if (this.get('session.isAuthenticated') && !_ember['default'].isEmpty(sessionData.token)) {
-				block('Authorization', 'Token ' + sessionData.token);
-			}
-		}
-	});
 });
 define('wpda-client/components/bs-accordion-item', ['exports', 'ember-bootstrap/components/bs-accordion-item'], function (exports, _emberBootstrapComponentsBsAccordionItem) {
   Object.defineProperty(exports, 'default', {
@@ -367,66 +333,9 @@ define('wpda-client/components/ember-wormhole', ['exports', 'ember-wormhole/comp
 });
 define('wpda-client/controllers/application', ['exports', 'ember'], function (exports, _ember) {
 	exports['default'] = _ember['default'].Controller.extend({
-		session: _ember['default'].inject.service('session'),
-
-		actions: {
-			invalidateSession: function invalidateSession() {
-				this.get('session').invalidate();
-			}
-		}
-	});
-});
-define('wpda-client/controllers/login', ['exports', 'ember'], function (exports, _ember) {
-	exports['default'] = _ember['default'].Controller.extend({
-		session: _ember['default'].inject.service('session'),
-
-		actions: {
-			authenticate: function authenticate() {
-				var _this = this;
-
-				var _getProperties = this.getProperties('username', 'password');
-
-				var username = _getProperties.username;
-				var password = _getProperties.password;
-
-				this.get('session').authenticate('authenticator:drf-token-authenticator', username, password)['catch'](function (reason) {
-					_this.set('error', reason);
-				});
-			}
-		}
-	});
-});
-define('wpda-client/controllers/register', ['exports', 'ember', 'wpda-client/config/environment'], function (exports, _ember, _wpdaClientConfigEnvironment) {
-	exports['default'] = _ember['default'].Controller.extend({
-		actions: {
-			register: function register() {
-				var _this = this;
-
-				var _getProperties = this.getProperties('username', 'email', 'password', 'confirm_password');
-
-				var username = _getProperties.username;
-				var email = _getProperties.email;
-				var password = _getProperties.password;
-				var confirm_password = _getProperties.confirm_password;
-
-				_ember['default'].$.ajax({
-					url: _wpdaClientConfigEnvironment['default'].host + '/api-register/',
-					type: 'POST',
-					data: JSON.stringify({
-						username: username,
-						email: email,
-						password: password,
-						confirm_password: confirm_password
-					}),
-					contentType: 'application/json;charset=utf-8',
-					dataType: 'json'
-				}).then(function (response) {
-					_this.set('signupComplete', true);
-				}, function (xhr, status, error) {
-					_this.set('error', xhr.responseText);
-				});
-			}
-		}
+		isHome: (function () {
+			return this.get('currentRouteName') === 'home';
+		}).property('currentRouteName')
 	});
 });
 define('wpda-client/helpers/app-version', ['exports', 'ember', 'wpda-client/config/environment'], function (exports, _ember, _wpdaClientConfigEnvironment) {
@@ -723,45 +632,24 @@ define('wpda-client/instance-initializers/ember-simple-auth', ['exports', 'ember
     }
   };
 });
-define('wpda-client/mixins/places/save-model-mixin', ['exports', 'ember'], function (exports, _ember) {
-  exports['default'] = _ember['default'].Mixin.create({
-    actions: {
-      save: function save() {
-        var route = this;
-        this.currentModel.save().then(function () {
-          route.transitionTo('places');
-        }, function () {
-          console.log('Failed to save the model');
-        });
-      },
-
-      willTransition: function willTransition() {
-        this._super.apply(this, arguments);
-        var record = this.controller.get('model');
-        record.rollbackAttributes();
-      }
-    }
-
-  });
-});
 define('wpda-client/models/place', ['exports', 'ember-data'], function (exports, _emberData) {
-  exports['default'] = _emberData['default'].Model.extend({
-    isVerified: _emberData['default'].attr('boolean,'),
-    venueId: _emberData['default'].attr('string,'),
-    name: _emberData['default'].attr('string,'),
-    permalink: _emberData['default'].attr('string,'),
-    lockLevel: _emberData['default'].attr('number,'),
-    categories: _emberData['default'].attr('string,'),
-    number: _emberData['default'].attr('string,'),
-    street: _emberData['default'].attr('string,'),
-    city: _emberData['default'].attr('string,'),
-    state: _emberData['default'].attr('string,'),
-    country: _emberData['default'].attr('string,'),
-    updatedBy: _emberData['default'].attr('string,'),
-    updatedOn: _emberData['default'].attr('string,'),
-    userReportOn: _emberData['default'].attr('string,'),
-    isResidential: _emberData['default'].attr('boolean')
-  });
+	exports['default'] = _emberData['default'].Model.extend({
+		isVerified: _emberData['default'].attr('boolean,'),
+		venueId: _emberData['default'].attr('string,'),
+		name: _emberData['default'].attr('string,'),
+		permalink: _emberData['default'].attr('string,'),
+		lockLevel: _emberData['default'].attr('number,'),
+		categories: _emberData['default'].attr('string,'),
+		number: _emberData['default'].attr('string,'),
+		street: _emberData['default'].attr('string,'),
+		city: _emberData['default'].attr('string,'),
+		state: _emberData['default'].attr('string,'),
+		country: _emberData['default'].attr('string,'),
+		updatedBy: _emberData['default'].attr('string,'),
+		updatedOn: _emberData['default'].attr('date,'),
+		userReportOn: _emberData['default'].attr('date,'),
+		isResidential: _emberData['default'].attr('boolean')
+	});
 });
 define('wpda-client/resolver', ['exports', 'ember-resolver'], function (exports, _emberResolver) {
   exports['default'] = _emberResolver['default'];
@@ -773,59 +661,25 @@ define('wpda-client/router', ['exports', 'ember', 'wpda-client/config/environmen
     rootURL: _wpdaClientConfigEnvironment['default'].rootURL
   });
 
-  Router.map(function () {
-    this.route('places', function () {
-      this.route('new');
-
-      this.route('edit', {
-        path: ':place_id/edit'
-      });
-
-      this.route('show', {
-        path: ':place_id'
-      });
-    });
-    this.route('login');
-    this.route('register');
-  });
+  Router.map(function () {});
 
   exports['default'] = Router;
 });
-define('wpda-client/routes/application', ['exports', 'ember', 'ember-simple-auth/mixins/application-route-mixin'], function (exports, _ember, _emberSimpleAuthMixinsApplicationRouteMixin) {
-	exports['default'] = _ember['default'].Route.extend(_emberSimpleAuthMixinsApplicationRouteMixin['default'], {});
+define("wpda-client/routes/application", ["exports", "ember"], function (exports, _ember) {
+	exports["default"] = _ember["default"].Route.extend({
+		model: function model() {
+			return _ember["default"].$.getJSON("/api/places");
+		}
+	});
 });
-define('wpda-client/routes/login', ['exports', 'ember', 'ember-simple-auth/mixins/unauthenticated-route-mixin'], function (exports, _ember, _emberSimpleAuthMixinsUnauthenticatedRouteMixin) {
-	exports['default'] = _ember['default'].Route.extend(_emberSimpleAuthMixinsUnauthenticatedRouteMixin['default'], {});
+define('wpda-client/serializers/application', ['exports', 'wpda-client/serializers/drf'], function (exports, _wpdaClientSerializersDrf) {
+  exports['default'] = _wpdaClientSerializersDrf['default'];
 });
-define('wpda-client/routes/places/edit', ['exports', 'ember', 'wpda-client/mixins/places/save-model-mixin', 'ember-simple-auth/mixins/authenticated-route-mixin'], function (exports, _ember, _wpdaClientMixinsPlacesSaveModelMixin, _emberSimpleAuthMixinsAuthenticatedRouteMixin) {
-	exports['default'] = _ember['default'].Route.extend(_wpdaClientMixinsPlacesSaveModelMixin['default'], _emberSimpleAuthMixinsAuthenticatedRouteMixin['default'], {});
+define('wpda-client/serializers/drf', ['exports', 'ember-django-adapter/serializers/drf'], function (exports, _emberDjangoAdapterSerializersDrf) {
+  exports['default'] = _emberDjangoAdapterSerializersDrf['default'];
 });
-define('wpda-client/routes/places/index', ['exports', 'ember'], function (exports, _ember) {
-  exports['default'] = _ember['default'].Route.extend({
-    actions: {
-      remove: function remove(model) {
-        if (confirm('Are you sure?')) {
-          model.destroyRecord();
-        }
-      }
-    },
-    model: function model() {
-      return this.store.findAll('place');
-    }
-  });
-});
-define('wpda-client/routes/places/new', ['exports', 'ember', 'wpda-client/mixins/places/save-model-mixin'], function (exports, _ember, _wpdaClientMixinsPlacesSaveModelMixin) {
-  exports['default'] = _ember['default'].Route.extend(_wpdaClientMixinsPlacesSaveModelMixin['default'], {
-    model: function model() {
-      return this.store.createRecord('place');
-    }
-  });
-});
-define('wpda-client/routes/register', ['exports', 'ember', 'ember-simple-auth/mixins/unauthenticated-route-mixin'], function (exports, _ember, _emberSimpleAuthMixinsUnauthenticatedRouteMixin) {
-	exports['default'] = _ember['default'].Route.extend(_emberSimpleAuthMixinsUnauthenticatedRouteMixin['default'], {});
-});
-define('wpda-client/serializers/place', ['exports', 'wpda-client/serializers/drf', 'ember-data'], function (exports, _wpdaClientSerializersDrf, _emberData) {
-	exports['default'] = _wpdaClientSerializersDrf['default'].extend({});
+define('wpda-client/serializers/place', ['exports', 'ember-data'], function (exports, _emberData) {
+  exports['default'] = _emberData['default'].JSONAPISerializer.extend({});
 });
 define('wpda-client/services/ajax', ['exports', 'ember-ajax/services/ajax'], function (exports, _emberAjaxServicesAjax) {
   Object.defineProperty(exports, 'default', {
@@ -844,50 +698,6 @@ define('wpda-client/session-stores/application', ['exports', 'ember-simple-auth/
 define("wpda-client/templates/application", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template((function () {
     var child0 = (function () {
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 2,
-              "column": 0
-            },
-            "end": {
-              "line": 4,
-              "column": 0
-            }
-          },
-          "moduleName": "wpda-client/templates/application.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createTextNode("	");
-          dom.appendChild(el0, el1);
-          var el1 = dom.createElement("a");
-          var el2 = dom.createTextNode("Logout");
-          dom.appendChild(el1, el2);
-          dom.appendChild(el0, el1);
-          var el1 = dom.createTextNode("\n");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-          var element0 = dom.childAt(fragment, [1]);
-          var morphs = new Array(1);
-          morphs[0] = dom.createElementMorph(element0);
-          return morphs;
-        },
-        statements: [["element", "action", ["invalidateSession"], [], ["loc", [null, [3, 4], [3, 34]]], 0, 0]],
-        locals: [],
-        templates: []
-      };
-    })();
-    var child1 = (function () {
       var child0 = (function () {
         return {
           meta: {
@@ -895,66 +705,134 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
             "loc": {
               "source": null,
               "start": {
-                "line": 5,
-                "column": 1
+                "line": 24,
+                "column": 2
               },
               "end": {
-                "line": 5,
-                "column": 26
+                "line": 40,
+                "column": 2
               }
             },
             "moduleName": "wpda-client/templates/application.hbs"
           },
           isEmpty: false,
-          arity: 0,
+          arity: 1,
           cachedFragment: null,
           hasRendered: false,
           buildFragment: function buildFragment(dom) {
             var el0 = dom.createDocumentFragment();
-            var el1 = dom.createTextNode("Login");
+            var el1 = dom.createTextNode("			");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("tr");
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createElement("a");
+            var el4 = dom.createComment("");
+            dom.appendChild(el3, el4);
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n				");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("td");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n			");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
             dom.appendChild(el0, el1);
             return el0;
           },
-          buildRenderNodes: function buildRenderNodes() {
-            return [];
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var element0 = dom.childAt(fragment, [1]);
+            var element1 = dom.childAt(element0, [3, 0]);
+            var morphs = new Array(14);
+            morphs[0] = dom.createMorphAt(dom.childAt(element0, [1]), 0, 0);
+            morphs[1] = dom.createAttrMorph(element1, 'href');
+            morphs[2] = dom.createMorphAt(element1, 0, 0);
+            morphs[3] = dom.createMorphAt(dom.childAt(element0, [5]), 0, 0);
+            morphs[4] = dom.createMorphAt(dom.childAt(element0, [7]), 0, 0);
+            morphs[5] = dom.createMorphAt(dom.childAt(element0, [9]), 0, 0);
+            morphs[6] = dom.createMorphAt(dom.childAt(element0, [11]), 0, 0);
+            morphs[7] = dom.createMorphAt(dom.childAt(element0, [13]), 0, 0);
+            morphs[8] = dom.createMorphAt(dom.childAt(element0, [15]), 0, 0);
+            morphs[9] = dom.createMorphAt(dom.childAt(element0, [17]), 0, 0);
+            morphs[10] = dom.createMorphAt(dom.childAt(element0, [19]), 0, 0);
+            morphs[11] = dom.createMorphAt(dom.childAt(element0, [21]), 0, 0);
+            morphs[12] = dom.createMorphAt(dom.childAt(element0, [23]), 0, 0);
+            morphs[13] = dom.createMorphAt(dom.childAt(element0, [25]), 0, 0);
+            return morphs;
           },
-          statements: [],
-          locals: [],
-          templates: []
-        };
-      })();
-      var child1 = (function () {
-        return {
-          meta: {
-            "revision": "Ember@2.9.0",
-            "loc": {
-              "source": null,
-              "start": {
-                "line": 5,
-                "column": 39
-              },
-              "end": {
-                "line": 5,
-                "column": 70
-              }
-            },
-            "moduleName": "wpda-client/templates/application.hbs"
-          },
-          isEmpty: false,
-          arity: 0,
-          cachedFragment: null,
-          hasRendered: false,
-          buildFragment: function buildFragment(dom) {
-            var el0 = dom.createDocumentFragment();
-            var el1 = dom.createTextNode("Register");
-            dom.appendChild(el0, el1);
-            return el0;
-          },
-          buildRenderNodes: function buildRenderNodes() {
-            return [];
-          },
-          statements: [],
-          locals: [],
+          statements: [["content", "place.isVerified", ["loc", [null, [26, 8], [26, 28]]], 0, 0, 0, 0], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [27, 19], [27, 34]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [27, 38], [27, 52]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [28, 8], [28, 27]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [29, 8], [29, 28]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [30, 8], [30, 24]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [31, 8], [31, 24]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [32, 8], [32, 22]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [33, 8], [33, 23]]], 0, 0, 0, 0], ["content", "place.country", ["loc", [null, [34, 8], [34, 25]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [35, 8], [35, 27]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [36, 8], [36, 27]]], 0, 0, 0, 0], ["content", "place.userReportOn", ["loc", [null, [37, 8], [37, 30]]], 0, 0, 0, 0], ["content", "place.isResidential", ["loc", [null, [38, 8], [38, 31]]], 0, 0, 0, 0]],
+          locals: ["place"],
           templates: []
         };
       })();
@@ -965,11 +843,11 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
             "source": null,
             "start": {
               "line": 4,
-              "column": 0
+              "column": 1
             },
             "end": {
-              "line": 6,
-              "column": 0
+              "line": 43,
+              "column": 1
             }
           },
           "moduleName": "wpda-client/templates/application.hbs"
@@ -982,25 +860,164 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
           var el0 = dom.createDocumentFragment();
           var el1 = dom.createTextNode("	");
           dom.appendChild(el0, el1);
-          var el1 = dom.createComment("");
-          dom.appendChild(el0, el1);
-          var el1 = dom.createTextNode(" ");
-          dom.appendChild(el0, el1);
-          var el1 = dom.createComment("");
+          var el1 = dom.createElement("table");
+          dom.setAttribute(el1, "class", "table-responsive table-striped table-condensed");
+          var el2 = dom.createTextNode("\n		");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("thead");
+          var el3 = dom.createTextNode("\n			");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createElement("tr");
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Verified?");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Name");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Lock level");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Categories");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Number");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Street");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("City");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("State");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Country");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Updated by");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Updated on");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("User report on");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("th");
+          var el5 = dom.createTextNode("Residential?");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n			");
+          dom.appendChild(el3, el4);
+          dom.appendChild(el2, el3);
+          var el3 = dom.createTextNode("\n		");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n		");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("tbody");
+          var el3 = dom.createTextNode("\n");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createComment("");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createTextNode("		");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n	");
+          dom.appendChild(el1, el2);
           dom.appendChild(el0, el1);
           var el1 = dom.createTextNode("\n");
           dom.appendChild(el0, el1);
           return el0;
         },
         buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-          var morphs = new Array(2);
-          morphs[0] = dom.createMorphAt(fragment, 1, 1, contextualElement);
-          morphs[1] = dom.createMorphAt(fragment, 3, 3, contextualElement);
+          var morphs = new Array(1);
+          morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1, 3]), 1, 1);
           return morphs;
         },
-        statements: [["block", "link-to", ["login"], [], 0, null, ["loc", [null, [5, 1], [5, 38]]]], ["block", "link-to", ["register"], [], 1, null, ["loc", [null, [5, 39], [5, 82]]]]],
+        statements: [["block", "each", [["get", "model", ["loc", [null, [24, 10], [24, 15]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [24, 2], [40, 11]]]]],
         locals: [],
-        templates: [child0, child1]
+        templates: [child0]
+      };
+    })();
+    var child1 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.9.0",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 43,
+              "column": 1
+            },
+            "end": {
+              "line": 45,
+              "column": 1
+            }
+          },
+          "moduleName": "wpda-client/templates/application.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("	");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("p");
+          var el2 = dom.createTextNode("No Places found");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes() {
+          return [];
+        },
+        statements: [],
+        locals: [],
+        templates: []
       };
     })();
     return {
@@ -1013,8 +1030,8 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
             "column": 0
           },
           "end": {
-            "line": 6,
-            "column": 7
+            "line": 46,
+            "column": 6
           }
         },
         "moduleName": "wpda-client/templates/application.hbs"
@@ -1025,23 +1042,33 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
       hasRendered: false,
       buildFragment: function buildFragment(dom) {
         var el0 = dom.createDocumentFragment();
-        var el1 = dom.createComment("");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createComment("");
+        var el1 = dom.createElement("div");
+        dom.setAttribute(el1, "class", "container-fluid");
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createComment("");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("h2");
+        var el3 = dom.createTextNode("List of Places");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createComment("");
+        dom.appendChild(el1, el2);
         dom.appendChild(el0, el1);
         return el0;
       },
       buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+        var element2 = dom.childAt(fragment, [0]);
         var morphs = new Array(2);
-        morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
-        morphs[1] = dom.createMorphAt(fragment, 2, 2, contextualElement);
-        dom.insertBoundary(fragment, 0);
-        dom.insertBoundary(fragment, null);
+        morphs[0] = dom.createMorphAt(element2, 1, 1);
+        morphs[1] = dom.createMorphAt(element2, 5, 5);
         return morphs;
       },
-      statements: [["content", "outlet", ["loc", [null, [1, 0], [1, 10]]], 0, 0, 0, 0], ["block", "if", [["get", "session.isAuthenticated", ["loc", [null, [2, 6], [2, 29]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [2, 0], [6, 7]]]]],
+      statements: [["content", "outlet", ["loc", [null, [2, 1], [2, 11]]], 0, 0, 0, 0], ["block", "if", [["get", "model.length", ["loc", [null, [4, 7], [4, 19]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [4, 1], [45, 8]]]]],
       locals: [],
       templates: [child0, child1]
     };
@@ -4771,1888 +4798,6 @@ define("wpda-client/templates/components/form-element/vertical/textarea", ["expo
     };
   })());
 });
-define("wpda-client/templates/login", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template((function () {
-    var child0 = (function () {
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 14,
-              "column": 1
-            },
-            "end": {
-              "line": 16,
-              "column": 1
-            }
-          },
-          "moduleName": "wpda-client/templates/login.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createTextNode("		");
-          dom.appendChild(el0, el1);
-          var el1 = dom.createElement("p");
-          var el2 = dom.createComment("");
-          dom.appendChild(el1, el2);
-          dom.appendChild(el0, el1);
-          var el1 = dom.createTextNode("\n");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-          var morphs = new Array(1);
-          morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 0, 0);
-          return morphs;
-        },
-        statements: [["content", "error", ["loc", [null, [15, 5], [15, 14]]], 0, 0, 0, 0]],
-        locals: [],
-        templates: []
-      };
-    })();
-    return {
-      meta: {
-        "revision": "Ember@2.9.0",
-        "loc": {
-          "source": null,
-          "start": {
-            "line": 1,
-            "column": 0
-          },
-          "end": {
-            "line": 17,
-            "column": 7
-          }
-        },
-        "moduleName": "wpda-client/templates/login.hbs"
-      },
-      isEmpty: false,
-      arity: 0,
-      cachedFragment: null,
-      hasRendered: false,
-      buildFragment: function buildFragment(dom) {
-        var el0 = dom.createDocumentFragment();
-        var el1 = dom.createComment("");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("form");
-        var el2 = dom.createTextNode("\n	");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("p");
-        var el3 = dom.createTextNode("\n		");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        dom.setAttribute(el3, "for", "username");
-        var el4 = dom.createTextNode("Login");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n		");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n	");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n	");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("p");
-        var el3 = dom.createTextNode("\n		");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        dom.setAttribute(el3, "for", "password");
-        var el4 = dom.createTextNode("Password");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n		");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n	");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n	");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("p");
-        var el3 = dom.createTextNode("\n		");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("button");
-        dom.setAttribute(el3, "type", "submit");
-        var el4 = dom.createTextNode("Login");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n	");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createComment("");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        return el0;
-      },
-      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var element0 = dom.childAt(fragment, [2]);
-        var morphs = new Array(5);
-        morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
-        morphs[1] = dom.createElementMorph(element0);
-        morphs[2] = dom.createMorphAt(dom.childAt(element0, [1]), 3, 3);
-        morphs[3] = dom.createMorphAt(dom.childAt(element0, [3]), 3, 3);
-        morphs[4] = dom.createMorphAt(element0, 7, 7);
-        dom.insertBoundary(fragment, 0);
-        return morphs;
-      },
-      statements: [["content", "outlet", ["loc", [null, [1, 0], [1, 10]]], 0, 0, 0, 0], ["element", "action", ["authenticate"], ["on", "submit"], ["loc", [null, [2, 6], [2, 43]]], 0, 0], ["inline", "input", [], ["id", "username", "placeholder", "Enter Login", "value", ["subexpr", "@mut", [["get", "username", ["loc", [null, [5, 56], [5, 64]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [5, 2], [5, 66]]], 0, 0], ["inline", "input", [], ["id", "password", "placeholder", "Enter Password", "type", "password", "value", ["subexpr", "@mut", [["get", "password", ["loc", [null, [9, 75], [9, 83]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [9, 2], [9, 85]]], 0, 0], ["block", "if", [["get", "error", ["loc", [null, [14, 7], [14, 12]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [14, 1], [16, 8]]]]],
-      locals: [],
-      templates: [child0]
-    };
-  })());
-});
-define("wpda-client/templates/places/-form", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template((function () {
-    return {
-      meta: {
-        "revision": "Ember@2.9.0",
-        "loc": {
-          "source": null,
-          "start": {
-            "line": 1,
-            "column": 0
-          },
-          "end": {
-            "line": 96,
-            "column": 0
-          }
-        },
-        "moduleName": "wpda-client/templates/places/-form.hbs"
-      },
-      isEmpty: false,
-      arity: 0,
-      cachedFragment: null,
-      hasRendered: false,
-      buildFragment: function buildFragment(dom) {
-        var el0 = dom.createDocumentFragment();
-        var el1 = dom.createElement("form");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Is verified\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Venue\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Name\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Permalink\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Lock level\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Categories\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Number\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Street\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      City\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      State\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Country\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Updated by\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Updated on\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      User report on\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("label");
-        var el4 = dom.createTextNode("\n      Is residential\n      ");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n    ");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("div");
-        var el3 = dom.createTextNode("\n    ");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("input");
-        dom.setAttribute(el3, "type", "submit");
-        dom.setAttribute(el3, "value", "Save");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n  ");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
-        return el0;
-      },
-      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var element0 = dom.childAt(fragment, [0]);
-        var morphs = new Array(16);
-        morphs[0] = dom.createElementMorph(element0);
-        morphs[1] = dom.createMorphAt(dom.childAt(element0, [1, 1]), 1, 1);
-        morphs[2] = dom.createMorphAt(dom.childAt(element0, [3, 1]), 1, 1);
-        morphs[3] = dom.createMorphAt(dom.childAt(element0, [5, 1]), 1, 1);
-        morphs[4] = dom.createMorphAt(dom.childAt(element0, [7, 1]), 1, 1);
-        morphs[5] = dom.createMorphAt(dom.childAt(element0, [9, 1]), 1, 1);
-        morphs[6] = dom.createMorphAt(dom.childAt(element0, [11, 1]), 1, 1);
-        morphs[7] = dom.createMorphAt(dom.childAt(element0, [13, 1]), 1, 1);
-        morphs[8] = dom.createMorphAt(dom.childAt(element0, [15, 1]), 1, 1);
-        morphs[9] = dom.createMorphAt(dom.childAt(element0, [17, 1]), 1, 1);
-        morphs[10] = dom.createMorphAt(dom.childAt(element0, [19, 1]), 1, 1);
-        morphs[11] = dom.createMorphAt(dom.childAt(element0, [21, 1]), 1, 1);
-        morphs[12] = dom.createMorphAt(dom.childAt(element0, [23, 1]), 1, 1);
-        morphs[13] = dom.createMorphAt(dom.childAt(element0, [25, 1]), 1, 1);
-        morphs[14] = dom.createMorphAt(dom.childAt(element0, [27, 1]), 1, 1);
-        morphs[15] = dom.createMorphAt(dom.childAt(element0, [29, 1]), 1, 1);
-        return morphs;
-      },
-      statements: [["element", "action", ["save"], ["on", "submit"], ["loc", [null, [1, 6], [1, 35]]], 0, 0], ["inline", "input", [], ["type", "checkbox", "checked", ["subexpr", "@mut", [["get", "model.isVerified", ["loc", [null, [5, 38], [5, 54]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [5, 6], [5, 56]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.venueId", ["loc", [null, [11, 32], [11, 45]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [11, 6], [11, 47]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.name", ["loc", [null, [17, 32], [17, 42]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [17, 6], [17, 44]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.permalink", ["loc", [null, [23, 32], [23, 47]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [23, 6], [23, 49]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.lockLevel", ["loc", [null, [29, 32], [29, 47]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [29, 6], [29, 49]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.categories", ["loc", [null, [35, 32], [35, 48]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [35, 6], [35, 50]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.number", ["loc", [null, [41, 32], [41, 44]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [41, 6], [41, 46]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.street", ["loc", [null, [47, 32], [47, 44]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [47, 6], [47, 46]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.city", ["loc", [null, [53, 32], [53, 42]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [53, 6], [53, 44]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.state", ["loc", [null, [59, 32], [59, 43]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [59, 6], [59, 45]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.country", ["loc", [null, [65, 32], [65, 45]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [65, 6], [65, 47]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.updatedBy", ["loc", [null, [71, 32], [71, 47]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [71, 6], [71, 49]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.updatedOn", ["loc", [null, [77, 32], [77, 47]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [77, 6], [77, 49]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "model.userReportOn", ["loc", [null, [83, 32], [83, 50]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [83, 6], [83, 52]]], 0, 0], ["inline", "input", [], ["type", "checkbox", "checked", ["subexpr", "@mut", [["get", "model.isResidential", ["loc", [null, [89, 38], [89, 57]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [89, 6], [89, 59]]], 0, 0]],
-      locals: [],
-      templates: []
-    };
-  })());
-});
-define("wpda-client/templates/places/edit", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template((function () {
-    var child0 = (function () {
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 2,
-              "column": 2
-            },
-            "end": {
-              "line": 2,
-              "column": 42
-            }
-          },
-          "moduleName": "wpda-client/templates/places/edit.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createTextNode("Place list");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes() {
-          return [];
-        },
-        statements: [],
-        locals: [],
-        templates: []
-      };
-    })();
-    return {
-      meta: {
-        "revision": "Ember@2.9.0",
-        "loc": {
-          "source": null,
-          "start": {
-            "line": 1,
-            "column": 0
-          },
-          "end": {
-            "line": 7,
-            "column": 0
-          }
-        },
-        "moduleName": "wpda-client/templates/places/edit.hbs"
-      },
-      isEmpty: false,
-      arity: 0,
-      cachedFragment: null,
-      hasRendered: false,
-      buildFragment: function buildFragment(dom) {
-        var el0 = dom.createDocumentFragment();
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createComment("");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("h1");
-        var el2 = dom.createTextNode("Edit Place");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createComment("");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
-        return el0;
-      },
-      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var morphs = new Array(2);
-        morphs[0] = dom.createMorphAt(dom.childAt(fragment, [0]), 1, 1);
-        morphs[1] = dom.createMorphAt(fragment, 4, 4, contextualElement);
-        return morphs;
-      },
-      statements: [["block", "link-to", ["places.index"], [], 0, null, ["loc", [null, [2, 2], [2, 42]]]], ["inline", "partial", ["places/form"], [], ["loc", [null, [6, 0], [6, 25]]], 0, 0]],
-      locals: [],
-      templates: [child0]
-    };
-  })());
-});
-define("wpda-client/templates/places/index", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template((function () {
-    var child0 = (function () {
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 4,
-              "column": 2
-            },
-            "end": {
-              "line": 4,
-              "column": 39
-            }
-          },
-          "moduleName": "wpda-client/templates/places/index.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createTextNode("New Place");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes() {
-          return [];
-        },
-        statements: [],
-        locals: [],
-        templates: []
-      };
-    })();
-    var child1 = (function () {
-      var child0 = (function () {
-        var child0 = (function () {
-          return {
-            meta: {
-              "revision": "Ember@2.9.0",
-              "loc": {
-                "source": null,
-                "start": {
-                  "line": 110,
-                  "column": 12
-                },
-                "end": {
-                  "line": 110,
-                  "column": 50
-                }
-              },
-              "moduleName": "wpda-client/templates/places/index.hbs"
-            },
-            isEmpty: false,
-            arity: 0,
-            cachedFragment: null,
-            hasRendered: false,
-            buildFragment: function buildFragment(dom) {
-              var el0 = dom.createDocumentFragment();
-              var el1 = dom.createTextNode("Edit");
-              dom.appendChild(el0, el1);
-              return el0;
-            },
-            buildRenderNodes: function buildRenderNodes() {
-              return [];
-            },
-            statements: [],
-            locals: [],
-            templates: []
-          };
-        })();
-        var child1 = (function () {
-          return {
-            meta: {
-              "revision": "Ember@2.9.0",
-              "loc": {
-                "source": null,
-                "start": {
-                  "line": 113,
-                  "column": 12
-                },
-                "end": {
-                  "line": 113,
-                  "column": 50
-                }
-              },
-              "moduleName": "wpda-client/templates/places/index.hbs"
-            },
-            isEmpty: false,
-            arity: 0,
-            cachedFragment: null,
-            hasRendered: false,
-            buildFragment: function buildFragment(dom) {
-              var el0 = dom.createDocumentFragment();
-              var el1 = dom.createTextNode("Show");
-              dom.appendChild(el0, el1);
-              return el0;
-            },
-            buildRenderNodes: function buildRenderNodes() {
-              return [];
-            },
-            statements: [],
-            locals: [],
-            templates: []
-          };
-        })();
-        return {
-          meta: {
-            "revision": "Ember@2.9.0",
-            "loc": {
-              "source": null,
-              "start": {
-                "line": 62,
-                "column": 6
-              },
-              "end": {
-                "line": 119,
-                "column": 6
-              }
-            },
-            "moduleName": "wpda-client/templates/places/index.hbs"
-          },
-          isEmpty: false,
-          arity: 1,
-          cachedFragment: null,
-          hasRendered: false,
-          buildFragment: function buildFragment(dom) {
-            var el0 = dom.createDocumentFragment();
-            var el1 = dom.createTextNode("        ");
-            dom.appendChild(el0, el1);
-            var el1 = dom.createElement("tr");
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n          ");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createTextNode("\n            ");
-            dom.appendChild(el2, el3);
-            var el3 = dom.createElement("a");
-            dom.setAttribute(el3, "href", "#");
-            var el4 = dom.createTextNode("Remove");
-            dom.appendChild(el3, el4);
-            dom.appendChild(el2, el3);
-            var el3 = dom.createTextNode("\n          ");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n        ");
-            dom.appendChild(el1, el2);
-            dom.appendChild(el0, el1);
-            var el1 = dom.createTextNode("\n");
-            dom.appendChild(el0, el1);
-            return el0;
-          },
-          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-            var element0 = dom.childAt(fragment, [1]);
-            var element1 = dom.childAt(element0, [35, 1]);
-            var morphs = new Array(18);
-            morphs[0] = dom.createMorphAt(dom.childAt(element0, [1]), 1, 1);
-            morphs[1] = dom.createMorphAt(dom.childAt(element0, [3]), 1, 1);
-            morphs[2] = dom.createMorphAt(dom.childAt(element0, [5]), 1, 1);
-            morphs[3] = dom.createMorphAt(dom.childAt(element0, [7]), 1, 1);
-            morphs[4] = dom.createMorphAt(dom.childAt(element0, [9]), 1, 1);
-            morphs[5] = dom.createMorphAt(dom.childAt(element0, [11]), 1, 1);
-            morphs[6] = dom.createMorphAt(dom.childAt(element0, [13]), 1, 1);
-            morphs[7] = dom.createMorphAt(dom.childAt(element0, [15]), 1, 1);
-            morphs[8] = dom.createMorphAt(dom.childAt(element0, [17]), 1, 1);
-            morphs[9] = dom.createMorphAt(dom.childAt(element0, [19]), 1, 1);
-            morphs[10] = dom.createMorphAt(dom.childAt(element0, [21]), 1, 1);
-            morphs[11] = dom.createMorphAt(dom.childAt(element0, [23]), 1, 1);
-            morphs[12] = dom.createMorphAt(dom.childAt(element0, [25]), 1, 1);
-            morphs[13] = dom.createMorphAt(dom.childAt(element0, [27]), 1, 1);
-            morphs[14] = dom.createMorphAt(dom.childAt(element0, [29]), 1, 1);
-            morphs[15] = dom.createMorphAt(dom.childAt(element0, [31]), 1, 1);
-            morphs[16] = dom.createMorphAt(dom.childAt(element0, [33]), 1, 1);
-            morphs[17] = dom.createElementMorph(element1);
-            return morphs;
-          },
-          statements: [["content", "place.isVerified", ["loc", [null, [65, 12], [65, 32]]], 0, 0, 0, 0], ["content", "place.venueId", ["loc", [null, [68, 12], [68, 29]]], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [71, 12], [71, 26]]], 0, 0, 0, 0], ["content", "place.permalink", ["loc", [null, [74, 12], [74, 31]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [77, 12], [77, 31]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [80, 12], [80, 32]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [83, 12], [83, 28]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [86, 12], [86, 28]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [89, 12], [89, 26]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [92, 12], [92, 27]]], 0, 0, 0, 0], ["content", "place.country", ["loc", [null, [95, 12], [95, 29]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [98, 12], [98, 31]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [101, 12], [101, 31]]], 0, 0, 0, 0], ["content", "place.userReportOn", ["loc", [null, [104, 12], [104, 34]]], 0, 0, 0, 0], ["content", "place.isResidential", ["loc", [null, [107, 12], [107, 35]]], 0, 0, 0, 0], ["block", "link-to", ["places.edit", ["get", "place", ["loc", [null, [110, 43], [110, 48]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [110, 12], [110, 50]]]], ["block", "link-to", ["places.show", ["get", "place", ["loc", [null, [113, 43], [113, 48]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [113, 12], [113, 50]]]], ["element", "action", ["remove", ["get", "place", ["loc", [null, [116, 42], [116, 47]]], 0, 0, 0, 0]], [], ["loc", [null, [116, 24], [116, 49]]], 0, 0]],
-          locals: ["place"],
-          templates: [child0, child1]
-        };
-      })();
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 7,
-              "column": 0
-            },
-            "end": {
-              "line": 122,
-              "column": 0
-            }
-          },
-          "moduleName": "wpda-client/templates/places/index.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createTextNode("  ");
-          dom.appendChild(el0, el1);
-          var el1 = dom.createElement("table");
-          var el2 = dom.createTextNode("\n    ");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createElement("thead");
-          var el3 = dom.createTextNode("\n      ");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createElement("tr");
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Is verified\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Venue\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Name\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Permalink\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Lock level\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Categories\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Number\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Street\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          City\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          State\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Country\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Updated by\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Updated on\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          User report on\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("\n          Is residential\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n        ");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          dom.setAttribute(el4, "colspan", "3");
-          var el5 = dom.createTextNode("\n          Actions\n        ");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n      ");
-          dom.appendChild(el3, el4);
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n    ");
-          dom.appendChild(el2, el3);
-          dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n    ");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createElement("tbody");
-          var el3 = dom.createTextNode("\n");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createComment("");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("    ");
-          dom.appendChild(el2, el3);
-          dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n  ");
-          dom.appendChild(el1, el2);
-          dom.appendChild(el0, el1);
-          var el1 = dom.createTextNode("\n");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-          var morphs = new Array(1);
-          morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1, 3]), 1, 1);
-          return morphs;
-        },
-        statements: [["block", "each", [["get", "model", ["loc", [null, [62, 14], [62, 19]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [62, 6], [119, 15]]]]],
-        locals: [],
-        templates: [child0]
-      };
-    })();
-    var child2 = (function () {
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 122,
-              "column": 0
-            },
-            "end": {
-              "line": 126,
-              "column": 0
-            }
-          },
-          "moduleName": "wpda-client/templates/places/index.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createTextNode("  ");
-          dom.appendChild(el0, el1);
-          var el1 = dom.createElement("p");
-          dom.setAttribute(el1, "id", "blankslate");
-          var el2 = dom.createTextNode("\n    No Places found\n  ");
-          dom.appendChild(el1, el2);
-          dom.appendChild(el0, el1);
-          var el1 = dom.createTextNode("\n");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes() {
-          return [];
-        },
-        statements: [],
-        locals: [],
-        templates: []
-      };
-    })();
-    return {
-      meta: {
-        "revision": "Ember@2.9.0",
-        "loc": {
-          "source": null,
-          "start": {
-            "line": 1,
-            "column": 0
-          },
-          "end": {
-            "line": 127,
-            "column": 0
-          }
-        },
-        "moduleName": "wpda-client/templates/places/index.hbs"
-      },
-      isEmpty: false,
-      arity: 0,
-      cachedFragment: null,
-      hasRendered: false,
-      buildFragment: function buildFragment(dom) {
-        var el0 = dom.createDocumentFragment();
-        var el1 = dom.createElement("h1");
-        var el2 = dom.createTextNode("Places list");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createComment("");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createComment("");
-        dom.appendChild(el0, el1);
-        return el0;
-      },
-      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var morphs = new Array(2);
-        morphs[0] = dom.createMorphAt(dom.childAt(fragment, [2]), 1, 1);
-        morphs[1] = dom.createMorphAt(fragment, 4, 4, contextualElement);
-        dom.insertBoundary(fragment, null);
-        return morphs;
-      },
-      statements: [["block", "link-to", ["places.new"], [], 0, null, ["loc", [null, [4, 2], [4, 39]]]], ["block", "if", [["get", "model.length", ["loc", [null, [7, 6], [7, 18]]], 0, 0, 0, 0]], [], 1, 2, ["loc", [null, [7, 0], [126, 7]]]]],
-      locals: [],
-      templates: [child0, child1, child2]
-    };
-  })());
-});
-define("wpda-client/templates/places/new", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template((function () {
-    var child0 = (function () {
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 2,
-              "column": 2
-            },
-            "end": {
-              "line": 2,
-              "column": 42
-            }
-          },
-          "moduleName": "wpda-client/templates/places/new.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createTextNode("Place list");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes() {
-          return [];
-        },
-        statements: [],
-        locals: [],
-        templates: []
-      };
-    })();
-    return {
-      meta: {
-        "revision": "Ember@2.9.0",
-        "loc": {
-          "source": null,
-          "start": {
-            "line": 1,
-            "column": 0
-          },
-          "end": {
-            "line": 7,
-            "column": 0
-          }
-        },
-        "moduleName": "wpda-client/templates/places/new.hbs"
-      },
-      isEmpty: false,
-      arity: 0,
-      cachedFragment: null,
-      hasRendered: false,
-      buildFragment: function buildFragment(dom) {
-        var el0 = dom.createDocumentFragment();
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createComment("");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("h1");
-        var el2 = dom.createTextNode("New Place");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createComment("");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
-        return el0;
-      },
-      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var morphs = new Array(2);
-        morphs[0] = dom.createMorphAt(dom.childAt(fragment, [0]), 1, 1);
-        morphs[1] = dom.createMorphAt(fragment, 4, 4, contextualElement);
-        return morphs;
-      },
-      statements: [["block", "link-to", ["places.index"], [], 0, null, ["loc", [null, [2, 2], [2, 42]]]], ["inline", "partial", ["places/form"], [], ["loc", [null, [6, 0], [6, 25]]], 0, 0]],
-      locals: [],
-      templates: [child0]
-    };
-  })());
-});
-define("wpda-client/templates/places/show", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template((function () {
-    var child0 = (function () {
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 2,
-              "column": 2
-            },
-            "end": {
-              "line": 2,
-              "column": 42
-            }
-          },
-          "moduleName": "wpda-client/templates/places/show.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createTextNode("Place list");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes() {
-          return [];
-        },
-        statements: [],
-        locals: [],
-        templates: []
-      };
-    })();
-    return {
-      meta: {
-        "revision": "Ember@2.9.0",
-        "loc": {
-          "source": null,
-          "start": {
-            "line": 1,
-            "column": 0
-          },
-          "end": {
-            "line": 82,
-            "column": 0
-          }
-        },
-        "moduleName": "wpda-client/templates/places/show.hbs"
-      },
-      isEmpty: false,
-      arity: 0,
-      cachedFragment: null,
-      hasRendered: false,
-      buildFragment: function buildFragment(dom) {
-        var el0 = dom.createDocumentFragment();
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createComment("");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("h1");
-        var el2 = dom.createTextNode("Place show");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Is verified:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Venue:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Name:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Permalink:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Lock level:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Categories:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Number:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Street:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("City:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("State:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Country:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Updated by:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Updated on:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("User report on:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createElement("p");
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("strong");
-        var el3 = dom.createTextNode("Is residential:");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  ");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createElement("span");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
-        dom.appendChild(el0, el1);
-        return el0;
-      },
-      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var morphs = new Array(16);
-        morphs[0] = dom.createMorphAt(dom.childAt(fragment, [0]), 1, 1);
-        morphs[1] = dom.createMorphAt(dom.childAt(fragment, [4, 3]), 0, 0);
-        morphs[2] = dom.createMorphAt(dom.childAt(fragment, [6, 3]), 0, 0);
-        morphs[3] = dom.createMorphAt(dom.childAt(fragment, [8, 3]), 0, 0);
-        morphs[4] = dom.createMorphAt(dom.childAt(fragment, [10, 3]), 0, 0);
-        morphs[5] = dom.createMorphAt(dom.childAt(fragment, [12, 3]), 0, 0);
-        morphs[6] = dom.createMorphAt(dom.childAt(fragment, [14, 3]), 0, 0);
-        morphs[7] = dom.createMorphAt(dom.childAt(fragment, [16, 3]), 0, 0);
-        morphs[8] = dom.createMorphAt(dom.childAt(fragment, [18, 3]), 0, 0);
-        morphs[9] = dom.createMorphAt(dom.childAt(fragment, [20, 3]), 0, 0);
-        morphs[10] = dom.createMorphAt(dom.childAt(fragment, [22, 3]), 0, 0);
-        morphs[11] = dom.createMorphAt(dom.childAt(fragment, [24, 3]), 0, 0);
-        morphs[12] = dom.createMorphAt(dom.childAt(fragment, [26, 3]), 0, 0);
-        morphs[13] = dom.createMorphAt(dom.childAt(fragment, [28, 3]), 0, 0);
-        morphs[14] = dom.createMorphAt(dom.childAt(fragment, [30, 3]), 0, 0);
-        morphs[15] = dom.createMorphAt(dom.childAt(fragment, [32, 3]), 0, 0);
-        return morphs;
-      },
-      statements: [["block", "link-to", ["places.index"], [], 0, null, ["loc", [null, [2, 2], [2, 42]]]], ["content", "model.isVerified", ["loc", [null, [9, 8], [9, 28]]], 0, 0, 0, 0], ["content", "model.venueId", ["loc", [null, [14, 8], [14, 25]]], 0, 0, 0, 0], ["content", "model.name", ["loc", [null, [19, 8], [19, 22]]], 0, 0, 0, 0], ["content", "model.permalink", ["loc", [null, [24, 8], [24, 27]]], 0, 0, 0, 0], ["content", "model.lockLevel", ["loc", [null, [29, 8], [29, 27]]], 0, 0, 0, 0], ["content", "model.categories", ["loc", [null, [34, 8], [34, 28]]], 0, 0, 0, 0], ["content", "model.number", ["loc", [null, [39, 8], [39, 24]]], 0, 0, 0, 0], ["content", "model.street", ["loc", [null, [44, 8], [44, 24]]], 0, 0, 0, 0], ["content", "model.city", ["loc", [null, [49, 8], [49, 22]]], 0, 0, 0, 0], ["content", "model.state", ["loc", [null, [54, 8], [54, 23]]], 0, 0, 0, 0], ["content", "model.country", ["loc", [null, [59, 8], [59, 25]]], 0, 0, 0, 0], ["content", "model.updatedBy", ["loc", [null, [64, 8], [64, 27]]], 0, 0, 0, 0], ["content", "model.updatedOn", ["loc", [null, [69, 8], [69, 27]]], 0, 0, 0, 0], ["content", "model.userReportOn", ["loc", [null, [74, 8], [74, 30]]], 0, 0, 0, 0], ["content", "model.isResidential", ["loc", [null, [79, 8], [79, 31]]], 0, 0, 0, 0]],
-      locals: [],
-      templates: [child0]
-    };
-  })());
-});
-define("wpda-client/templates/register", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template((function () {
-    var child0 = (function () {
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 2,
-              "column": 0
-            },
-            "end": {
-              "line": 4,
-              "column": 0
-            }
-          },
-          "moduleName": "wpda-client/templates/register.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createElement("p");
-          var el2 = dom.createTextNode("Signup complete.");
-          dom.appendChild(el1, el2);
-          dom.appendChild(el0, el1);
-          var el1 = dom.createTextNode("\n");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes() {
-          return [];
-        },
-        statements: [],
-        locals: [],
-        templates: []
-      };
-    })();
-    var child1 = (function () {
-      var child0 = (function () {
-        return {
-          meta: {
-            "revision": "Ember@2.9.0",
-            "loc": {
-              "source": null,
-              "start": {
-                "line": 26,
-                "column": 1
-              },
-              "end": {
-                "line": 28,
-                "column": 1
-              }
-            },
-            "moduleName": "wpda-client/templates/register.hbs"
-          },
-          isEmpty: false,
-          arity: 0,
-          cachedFragment: null,
-          hasRendered: false,
-          buildFragment: function buildFragment(dom) {
-            var el0 = dom.createDocumentFragment();
-            var el1 = dom.createTextNode("	");
-            dom.appendChild(el0, el1);
-            var el1 = dom.createElement("p");
-            var el2 = dom.createComment("");
-            dom.appendChild(el1, el2);
-            dom.appendChild(el0, el1);
-            var el1 = dom.createTextNode("\n");
-            dom.appendChild(el0, el1);
-            return el0;
-          },
-          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-            var morphs = new Array(1);
-            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 0, 0);
-            return morphs;
-          },
-          statements: [["content", "error", ["loc", [null, [27, 4], [27, 13]]], 0, 0, 0, 0]],
-          locals: [],
-          templates: []
-        };
-      })();
-      return {
-        meta: {
-          "revision": "Ember@2.9.0",
-          "loc": {
-            "source": null,
-            "start": {
-              "line": 4,
-              "column": 0
-            },
-            "end": {
-              "line": 30,
-              "column": 0
-            }
-          },
-          "moduleName": "wpda-client/templates/register.hbs"
-        },
-        isEmpty: false,
-        arity: 0,
-        cachedFragment: null,
-        hasRendered: false,
-        buildFragment: function buildFragment(dom) {
-          var el0 = dom.createDocumentFragment();
-          var el1 = dom.createElement("form");
-          var el2 = dom.createTextNode("\n	");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createElement("p");
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createElement("label");
-          dom.setAttribute(el3, "for", "username");
-          var el4 = dom.createTextNode("Login");
-          dom.appendChild(el3, el4);
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createComment("");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n	");
-          dom.appendChild(el2, el3);
-          dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n	");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createElement("p");
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createElement("label");
-          dom.setAttribute(el3, "for", "email");
-          var el4 = dom.createTextNode("Email");
-          dom.appendChild(el3, el4);
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createComment("");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n	");
-          dom.appendChild(el2, el3);
-          dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n	");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createElement("p");
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createElement("label");
-          dom.setAttribute(el3, "for", "password");
-          var el4 = dom.createTextNode("Password");
-          dom.appendChild(el3, el4);
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createComment("");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n	");
-          dom.appendChild(el2, el3);
-          dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n	");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createElement("p");
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createElement("label");
-          dom.setAttribute(el3, "for", "confirm_password");
-          var el4 = dom.createTextNode("Confirm Password");
-          dom.appendChild(el3, el4);
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createComment("");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n	");
-          dom.appendChild(el2, el3);
-          dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n	");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createElement("p");
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createElement("button");
-          dom.setAttribute(el3, "type", "submit");
-          var el4 = dom.createTextNode("Sign Up");
-          dom.appendChild(el3, el4);
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n	");
-          dom.appendChild(el2, el3);
-          dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n	\n");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createComment("");
-          dom.appendChild(el1, el2);
-          dom.appendChild(el0, el1);
-          var el1 = dom.createTextNode("\n");
-          dom.appendChild(el0, el1);
-          return el0;
-        },
-        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-          var element0 = dom.childAt(fragment, [0]);
-          var morphs = new Array(6);
-          morphs[0] = dom.createElementMorph(element0);
-          morphs[1] = dom.createMorphAt(dom.childAt(element0, [1]), 3, 3);
-          morphs[2] = dom.createMorphAt(dom.childAt(element0, [3]), 3, 3);
-          morphs[3] = dom.createMorphAt(dom.childAt(element0, [5]), 3, 3);
-          morphs[4] = dom.createMorphAt(dom.childAt(element0, [7]), 3, 3);
-          morphs[5] = dom.createMorphAt(element0, 11, 11);
-          return morphs;
-        },
-        statements: [["element", "action", ["register"], ["on", "submit"], ["loc", [null, [5, 6], [5, 39]]], 0, 0], ["inline", "input", [], ["id", "username", "placeholder", "Enter Login", "value", ["subexpr", "@mut", [["get", "username", ["loc", [null, [8, 56], [8, 64]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [8, 2], [8, 66]]], 0, 0], ["inline", "input", [], ["id", "email", "placeholder", "Enter Email", "value", ["subexpr", "@mut", [["get", "email", ["loc", [null, [12, 53], [12, 58]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [12, 2], [12, 60]]], 0, 0], ["inline", "input", [], ["id", "password", "placeholder", "Enter Password", "type", "password", "value", ["subexpr", "@mut", [["get", "password", ["loc", [null, [16, 75], [16, 83]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [16, 2], [16, 85]]], 0, 0], ["inline", "input", [], ["id", "confirm_password", "placeholder", "Confirm Password", "type", "password", "value", ["subexpr", "@mut", [["get", "confirm_password", ["loc", [null, [20, 85], [20, 101]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [20, 2], [20, 103]]], 0, 0], ["block", "if", [["get", "error", ["loc", [null, [26, 7], [26, 12]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [26, 1], [28, 8]]]]],
-        locals: [],
-        templates: [child0]
-      };
-    })();
-    return {
-      meta: {
-        "revision": "Ember@2.9.0",
-        "loc": {
-          "source": null,
-          "start": {
-            "line": 1,
-            "column": 0
-          },
-          "end": {
-            "line": 30,
-            "column": 7
-          }
-        },
-        "moduleName": "wpda-client/templates/register.hbs"
-      },
-      isEmpty: false,
-      arity: 0,
-      cachedFragment: null,
-      hasRendered: false,
-      buildFragment: function buildFragment(dom) {
-        var el0 = dom.createDocumentFragment();
-        var el1 = dom.createComment("");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createComment("");
-        dom.appendChild(el0, el1);
-        return el0;
-      },
-      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var morphs = new Array(2);
-        morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
-        morphs[1] = dom.createMorphAt(fragment, 2, 2, contextualElement);
-        dom.insertBoundary(fragment, 0);
-        dom.insertBoundary(fragment, null);
-        return morphs;
-      },
-      statements: [["content", "outlet", ["loc", [null, [1, 0], [1, 10]]], 0, 0, 0, 0], ["block", "if", [["get", "signupComplete", ["loc", [null, [2, 6], [2, 20]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [2, 0], [30, 7]]]]],
-      locals: [],
-      templates: [child0, child1]
-    };
-  })());
-});
 /* jshint ignore:start */
 
 
@@ -6689,7 +4834,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+2abedbcc"});
+  require("wpda-client/app")["default"].create({"API_HOST":"http://localhost:80","API_NAMESPACE":"api","name":"wpda-client","version":"0.1.0+70dc01f6","API_ADD_TRAILING_SLASHES":true});
 }
 
 /* jshint ignore:end */
