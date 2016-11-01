@@ -1,6 +1,17 @@
 from __future__ import unicode_literals
 from django.db import models
+#from django.contrib.auth.models import *
+'''
+class Profile(models.Model):
+	user = models.ForeignKey(User)
+	waze_id = models.CharField(max_length=63, unique=True)
 
+	class JSONAPIMeta:
+		resource_name = "profile"
+
+	def __str__(self):
+		return self.user.username
+'''
 class Place(models.Model):
 	is_verified = models.BooleanField(default=False)
 	venue_id = models.CharField(max_length=63, primary_key=True, editable=False)
