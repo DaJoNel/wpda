@@ -17,14 +17,16 @@ from django.conf.urls import url, include
 from django.contrib import admin
 
 from rest_framework import routers
+from rest_framework.authtoken.views import obtain_auth_token
 from api import views
 from api.views import *
 
-router = routers.DefaultRouter(trailing_slash=False)
+router = routers.DefaultRouter()	# (trailing_slash=False)
 router.register("profiles", ProfileViewSet)
 router.register("places", PlaceViewSet)
 
 urlpatterns = [
+	url(r'^api-auth-token/', obtain_auth_token),
 	url(r'^admin/', admin.site.urls),
 	url(r'^api/', include(router.urls)),
 	url(r'^', views.home)

@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 from django.db import models
 
 class Profile(models.Model):
-	#user = models.ForeignKey(User)
+	#user_id = models.ForeignKey(User)
 	waze_id = models.CharField(max_length=63, unique=True)
 
 	def __str__(self):
@@ -24,6 +24,6 @@ class Place(models.Model):
 	updated_on = models.DateTimeField(blank=True, null=True)
 	user_report_on = models.DateTimeField(blank=True, null=True)
 	is_residential = models.BooleanField(default=False)
-	
+
 	def __str__(self):
 		return ' '.join([self.venue_id, self.name])

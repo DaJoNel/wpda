@@ -10,7 +10,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 	#user = UserSerializer()
 	class Meta:
 		model = Profile
-		fields = ('id', 'user', 'waze_id')
+		fields = ('waze_id', )
 
 class PlaceSerializer(serializers.ModelSerializer):
 	class Meta:

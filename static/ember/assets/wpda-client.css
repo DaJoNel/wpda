@@ -1,0 +1,11 @@
+.auth-form {
+	margin: 8px;
+}
+
+.auth-field {
+	width: 150px !important;
+}
+
+.control-label {
+	margin-left: 4px;
+}

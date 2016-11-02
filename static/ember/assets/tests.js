@@ -9,15 +9,6 @@ define('wpda-client/tests/adapters/application.jshint', ['exports'], function (e
     assert.ok(true, 'adapters/application.js should pass jshint.');
   });
 });
-define('wpda-client/tests/adapters/place.jshint', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('JSHint | adapters/place.js');
-  QUnit.test('should pass jshint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'adapters/place.js should pass jshint.');
-  });
-});
 define('wpda-client/tests/app.jshint', ['exports'], function (exports) {
   'use strict';
 
@@ -27,13 +18,22 @@ define('wpda-client/tests/app.jshint', ['exports'], function (exports) {
     assert.ok(true, 'app.js should pass jshint.');
   });
 });
-define('wpda-client/tests/controllers/application.jshint', ['exports'], function (exports) {
+define('wpda-client/tests/authenticators/drf-token-authenticator.jshint', ['exports'], function (exports) {
   'use strict';
 
-  QUnit.module('JSHint | controllers/application.js');
+  QUnit.module('JSHint | authenticators/drf-token-authenticator.js');
   QUnit.test('should pass jshint', function (assert) {
     assert.expect(1);
-    assert.ok(true, 'controllers/application.js should pass jshint.');
+    assert.ok(false, 'authenticators/drf-token-authenticator.js should pass jshint.\nauthenticators/drf-token-authenticator.js: line 34, col 30, \'error\' is defined but never used.\nauthenticators/drf-token-authenticator.js: line 34, col 22, \'status\' is defined but never used.\n\n2 errors');
+  });
+});
+define('wpda-client/tests/components/auth-manager.jshint', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('JSHint | components/auth-manager.js');
+  QUnit.test('should pass jshint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'components/auth-manager.js should pass jshint.');
   });
 });
 define('wpda-client/tests/helpers/destroy-app', ['exports', 'ember'], function (exports, _ember) {
@@ -175,6 +175,146 @@ define('wpda-client/tests/helpers/start-app.jshint', ['exports'], function (expo
     assert.ok(true, 'helpers/start-app.js should pass jshint.');
   });
 });
+define('wpda-client/tests/integration/components/auth-manager-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
+
+  (0, _emberQunit.moduleForComponent)('auth-manager', 'Integration | Component | auth manager', {
+    integration: true
+  });
+
+  (0, _emberQunit.test)('it renders', function (assert) {
+    // Set any properties with this.set('myProperty', 'value');
+    // Handle any actions with this.on('myAction', function(val) { ... });
+
+    this.render(Ember.HTMLBars.template((function () {
+      return {
+        meta: {
+          'revision': 'Ember@2.9.0',
+          'loc': {
+            'source': null,
+            'start': {
+              'line': 1,
+              'column': 0
+            },
+            'end': {
+              'line': 1,
+              'column': 16
+            }
+          }
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createComment('');
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var morphs = new Array(1);
+          morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
+          dom.insertBoundary(fragment, 0);
+          dom.insertBoundary(fragment, null);
+          return morphs;
+        },
+        statements: [['content', 'auth-manager', ['loc', [null, [1, 0], [1, 16]]], 0, 0, 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })()));
+
+    assert.equal(this.$().text().trim(), '');
+
+    // Template block usage:
+    this.render(Ember.HTMLBars.template((function () {
+      var child0 = (function () {
+        return {
+          meta: {
+            'revision': 'Ember@2.9.0',
+            'loc': {
+              'source': null,
+              'start': {
+                'line': 2,
+                'column': 4
+              },
+              'end': {
+                'line': 4,
+                'column': 4
+              }
+            }
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode('      template block text\n');
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes() {
+            return [];
+          },
+          statements: [],
+          locals: [],
+          templates: []
+        };
+      })();
+
+      return {
+        meta: {
+          'revision': 'Ember@2.9.0',
+          'loc': {
+            'source': null,
+            'start': {
+              'line': 1,
+              'column': 0
+            },
+            'end': {
+              'line': 5,
+              'column': 2
+            }
+          }
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode('\n');
+          dom.appendChild(el0, el1);
+          var el1 = dom.createComment('');
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode('  ');
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var morphs = new Array(1);
+          morphs[0] = dom.createMorphAt(fragment, 1, 1, contextualElement);
+          return morphs;
+        },
+        statements: [['block', 'auth-manager', [], [], 0, null, ['loc', [null, [2, 4], [4, 21]]]]],
+        locals: [],
+        templates: [child0]
+      };
+    })()));
+
+    assert.equal(this.$().text().trim(), 'template block text');
+  });
+});
+define('wpda-client/tests/integration/components/auth-manager-test.jshint', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('JSHint | integration/components/auth-manager-test.js');
+  QUnit.test('should pass jshint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'integration/components/auth-manager-test.js should pass jshint.');
+  });
+});
 define('wpda-client/tests/models/place.jshint', ['exports'], function (exports) {
   'use strict';
 
@@ -253,28 +393,6 @@ define('wpda-client/tests/unit/adapters/application-test.jshint', ['exports'], f
   QUnit.test('should pass jshint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'unit/adapters/application-test.js should pass jshint.');
-  });
-});
-define('wpda-client/tests/unit/adapters/place-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
-
-  (0, _emberQunit.moduleFor)('adapter:place', 'Unit | Adapter | place', {
-    // Specify the other units that are required for this test.
-    // needs: ['serializer:foo']
-  });
-
-  // Replace this with your real tests.
-  (0, _emberQunit.test)('it exists', function (assert) {
-    var adapter = this.subject();
-    assert.ok(adapter);
-  });
-});
-define('wpda-client/tests/unit/adapters/place-test.jshint', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('JSHint | unit/adapters/place-test.js');
-  QUnit.test('should pass jshint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'unit/adapters/place-test.js should pass jshint.');
   });
 });
 define('wpda-client/tests/unit/models/place-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
