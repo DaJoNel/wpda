@@ -1,19 +1,17 @@
 from rest_framework import serializers
 from models import *
-#from django.contrib.auth.models import *
 '''
 class UserSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = User
 		fields = ('id', 'username', 'email', 'url')
-
+'''
 class ProfileSerializer(serializers.ModelSerializer):
-	user = UserSerializer()
+	#user = UserSerializer()
 	class Meta:
 		model = Profile
 		fields = ('id', 'user', 'waze_id')
-		depth = 1
-'''
+
 class PlaceSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Place

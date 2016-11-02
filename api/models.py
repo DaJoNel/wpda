@@ -1,17 +1,13 @@
 from __future__ import unicode_literals
 from django.db import models
-#from django.contrib.auth.models import *
-'''
-class Profile(models.Model):
-	user = models.ForeignKey(User)
-	waze_id = models.CharField(max_length=63, unique=True)
 
-	class JSONAPIMeta:
-		resource_name = "profile"
+class Profile(models.Model):
+	#user = models.ForeignKey(User)
+	waze_id = models.CharField(max_length=63, unique=True)
 
 	def __str__(self):
 		return self.user.username
-'''
+
 class Place(models.Model):
 	is_verified = models.BooleanField(default=False)
 	venue_id = models.CharField(max_length=63, primary_key=True, editable=False)
@@ -28,9 +24,6 @@ class Place(models.Model):
 	updated_on = models.DateTimeField(blank=True, null=True)
 	user_report_on = models.DateTimeField(blank=True, null=True)
 	is_residential = models.BooleanField(default=False)
-
-	class JSONAPIMeta:
-		resource_name = "places"
-
+	
 	def __str__(self):
 		return ' '.join([self.venue_id, self.name])

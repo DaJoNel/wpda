@@ -670,6 +670,18 @@ define("wpda-client/routes/application", ["exports", "ember"], function (exports
 		model: function model() {
 			return _ember["default"].$.getJSON("/api/places");
 		}
+		/*
+  actions: {
+  	model: function(data) {
+  		Ember.$.getJSON({
+  			data: data,
+  			method: 'GET',
+  			url: '/api/places'
+  		}).then((placeList) => {
+  			this.store.pushPayload(placeList);
+  		});
+  	}
+  }*/
 	});
 });
 define('wpda-client/serializers/application', ['exports', 'wpda-client/serializers/drf'], function (exports, _wpdaClientSerializersDrf) {
@@ -705,11 +717,11 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
             "loc": {
               "source": null,
               "start": {
-                "line": 24,
+                "line": 22,
                 "column": 2
               },
               "end": {
-                "line": 40,
+                "line": 35,
                 "column": 2
               }
             },
@@ -773,22 +785,8 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
             var el2 = dom.createElement("td");
             var el3 = dom.createComment("");
             dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n				");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createComment("");
+            var el3 = dom.createTextNode(" on ");
             dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n				");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n				");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
             var el3 = dom.createComment("");
             dom.appendChild(el2, el3);
             dom.appendChild(el1, el2);
@@ -814,7 +812,8 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
           buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
             var element0 = dom.childAt(fragment, [1]);
             var element1 = dom.childAt(element0, [3, 0]);
-            var morphs = new Array(14);
+            var element2 = dom.childAt(element0, [15]);
+            var morphs = new Array(12);
             morphs[0] = dom.createMorphAt(dom.childAt(element0, [1]), 0, 0);
             morphs[1] = dom.createAttrMorph(element1, 'href');
             morphs[2] = dom.createMorphAt(element1, 0, 0);
@@ -823,15 +822,13 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
             morphs[5] = dom.createMorphAt(dom.childAt(element0, [9]), 0, 0);
             morphs[6] = dom.createMorphAt(dom.childAt(element0, [11]), 0, 0);
             morphs[7] = dom.createMorphAt(dom.childAt(element0, [13]), 0, 0);
-            morphs[8] = dom.createMorphAt(dom.childAt(element0, [15]), 0, 0);
-            morphs[9] = dom.createMorphAt(dom.childAt(element0, [17]), 0, 0);
-            morphs[10] = dom.createMorphAt(dom.childAt(element0, [19]), 0, 0);
-            morphs[11] = dom.createMorphAt(dom.childAt(element0, [21]), 0, 0);
-            morphs[12] = dom.createMorphAt(dom.childAt(element0, [23]), 0, 0);
-            morphs[13] = dom.createMorphAt(dom.childAt(element0, [25]), 0, 0);
+            morphs[8] = dom.createMorphAt(element2, 0, 0);
+            morphs[9] = dom.createMorphAt(element2, 2, 2);
+            morphs[10] = dom.createMorphAt(dom.childAt(element0, [17]), 0, 0);
+            morphs[11] = dom.createMorphAt(dom.childAt(element0, [19]), 0, 0);
             return morphs;
           },
-          statements: [["content", "place.isVerified", ["loc", [null, [26, 8], [26, 28]]], 0, 0, 0, 0], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [27, 19], [27, 34]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [27, 38], [27, 52]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [28, 8], [28, 27]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [29, 8], [29, 28]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [30, 8], [30, 24]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [31, 8], [31, 24]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [32, 8], [32, 22]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [33, 8], [33, 23]]], 0, 0, 0, 0], ["content", "place.country", ["loc", [null, [34, 8], [34, 25]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [35, 8], [35, 27]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [36, 8], [36, 27]]], 0, 0, 0, 0], ["content", "place.userReportOn", ["loc", [null, [37, 8], [37, 30]]], 0, 0, 0, 0], ["content", "place.isResidential", ["loc", [null, [38, 8], [38, 31]]], 0, 0, 0, 0]],
+          statements: [["content", "place.isVerified", ["loc", [null, [24, 8], [24, 28]]], 0, 0, 0, 0], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [25, 19], [25, 34]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [25, 38], [25, 52]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [26, 8], [26, 24]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [27, 8], [27, 24]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [28, 8], [28, 22]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [29, 8], [29, 23]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [30, 8], [30, 28]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [31, 8], [31, 27]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [31, 31], [31, 50]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [32, 8], [32, 27]]], 0, 0, 0, 0], ["content", "place.isResidential", ["loc", [null, [33, 8], [33, 31]]], 0, 0, 0, 0]],
           locals: ["place"],
           templates: []
         };
@@ -842,11 +839,11 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
           "loc": {
             "source": null,
             "start": {
-              "line": 4,
+              "line": 5,
               "column": 1
             },
             "end": {
-              "line": 43,
+              "line": 38,
               "column": 1
             }
           },
@@ -874,22 +871,14 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
           var el5 = dom.createTextNode("Verified?");
           dom.appendChild(el4, el5);
           dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("	");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createComment("This should only be visible when logged in");
+          dom.appendChild(el3, el4);
           var el4 = dom.createTextNode("\n				");
           dom.appendChild(el3, el4);
           var el4 = dom.createElement("th");
           var el5 = dom.createTextNode("Name");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n				");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("Lock level");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n				");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("Categories");
           dom.appendChild(el4, el5);
           dom.appendChild(el3, el4);
           var el4 = dom.createTextNode("\n				");
@@ -919,25 +908,19 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
           var el4 = dom.createTextNode("\n				");
           dom.appendChild(el3, el4);
           var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("Country");
+          var el5 = dom.createTextNode("Categories");
           dom.appendChild(el4, el5);
           dom.appendChild(el3, el4);
           var el4 = dom.createTextNode("\n				");
           dom.appendChild(el3, el4);
           var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("Updated by");
+          var el5 = dom.createTextNode("Last Updated");
           dom.appendChild(el4, el5);
           dom.appendChild(el3, el4);
           var el4 = dom.createTextNode("\n				");
           dom.appendChild(el3, el4);
           var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("Updated on");
-          dom.appendChild(el4, el5);
-          dom.appendChild(el3, el4);
-          var el4 = dom.createTextNode("\n				");
-          dom.appendChild(el3, el4);
-          var el4 = dom.createElement("th");
-          var el5 = dom.createTextNode("User report on");
+          var el5 = dom.createTextNode("Lock Level");
           dom.appendChild(el4, el5);
           dom.appendChild(el3, el4);
           var el4 = dom.createTextNode("\n				");
@@ -974,7 +957,7 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
           morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1, 3]), 1, 1);
           return morphs;
         },
-        statements: [["block", "each", [["get", "model", ["loc", [null, [24, 10], [24, 15]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [24, 2], [40, 11]]]]],
+        statements: [["block", "each", [["get", "model", ["loc", [null, [22, 10], [22, 15]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [22, 2], [35, 11]]]]],
         locals: [],
         templates: [child0]
       };
@@ -986,11 +969,11 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
           "loc": {
             "source": null,
             "start": {
-              "line": 43,
+              "line": 38,
               "column": 1
             },
             "end": {
-              "line": 45,
+              "line": 40,
               "column": 1
             }
           },
@@ -1005,7 +988,7 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
           var el1 = dom.createTextNode("	");
           dom.appendChild(el0, el1);
           var el1 = dom.createElement("p");
-          var el2 = dom.createTextNode("No Places found");
+          var el2 = dom.createTextNode("No Places are being watched.");
           dom.appendChild(el1, el2);
           dom.appendChild(el0, el1);
           var el1 = dom.createTextNode("\n");
@@ -1030,7 +1013,7 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
             "column": 0
           },
           "end": {
-            "line": 46,
+            "line": 41,
             "column": 6
           }
         },
@@ -1054,6 +1037,13 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
         var el3 = dom.createTextNode("List of Places");
         dom.appendChild(el2, el3);
         dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("button");
+        dom.setAttribute(el2, "class", "btn btn-default");
+        var el3 = dom.createTextNode("Watch a New Place");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
         var el2 = dom.createTextNode("\n");
         dom.appendChild(el1, el2);
         var el2 = dom.createComment("");
@@ -1062,13 +1052,13 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
         return el0;
       },
       buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var element2 = dom.childAt(fragment, [0]);
+        var element3 = dom.childAt(fragment, [0]);
         var morphs = new Array(2);
-        morphs[0] = dom.createMorphAt(element2, 1, 1);
-        morphs[1] = dom.createMorphAt(element2, 5, 5);
+        morphs[0] = dom.createMorphAt(element3, 1, 1);
+        morphs[1] = dom.createMorphAt(element3, 7, 7);
         return morphs;
       },
-      statements: [["content", "outlet", ["loc", [null, [2, 1], [2, 11]]], 0, 0, 0, 0], ["block", "if", [["get", "model.length", ["loc", [null, [4, 7], [4, 19]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [4, 1], [45, 8]]]]],
+      statements: [["content", "outlet", ["loc", [null, [2, 1], [2, 11]]], 0, 0, 0, 0], ["block", "if", [["get", "model.length", ["loc", [null, [5, 7], [5, 19]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [5, 1], [40, 8]]]]],
       locals: [],
       templates: [child0, child1]
     };
@@ -4834,7 +4824,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("wpda-client/app")["default"].create({"API_HOST":"http://localhost:80","API_NAMESPACE":"api","name":"wpda-client","version":"0.1.0+70dc01f6","API_ADD_TRAILING_SLASHES":true});
+  require("wpda-client/app")["default"].create({"API_HOST":"http://localhost:80","API_NAMESPACE":"api","name":"wpda-client","version":"0.1.0+160e79cd","API_ADD_TRAILING_SLASHES":true});
 }
 
 /* jshint ignore:end */
