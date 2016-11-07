@@ -28,6 +28,11 @@ router.register("places", PlaceViewSet)
 urlpatterns = [
 	url(r'^api-auth-token/', obtain_auth_token),
 	url(r'^admin/', admin.site.urls),
+
+	# API
 	url(r'^api/', include(router.urls)),
-	url(r'^', views.home)
+	#url(r'^places/?id=<venue_id>[^/]+)?', views.places, name='places'),
+
+	# Frontend Ember app
+	url(r'^', views.frontend, name='frontend')
 ]

@@ -25,6 +25,6 @@ class PlaceViewSet(viewsets.ModelViewSet):
 	queryset = Place.objects.all()
 	serializer_class = PlaceSerializer
 
-def home(request):
+def frontend(request):
 	# Send requests for / to the Ember app
-	return render(request, 'index.html', {},)
+	return render(request, 'index.html', {})
