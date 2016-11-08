@@ -56,7 +56,7 @@ def scrape():
 
 	for row in place:
 		ven_id = re.findall("(?!.*[venues=]).*", row[1])	# Extract the venue ID
-		
+
 		# Generate a Python datetime object
 		if row[10] != "":
 			row[10] = iso8601.parse_date(row[10])
@@ -69,14 +69,14 @@ def scrape():
 			row[11] = None
 
 		# Add the row to the database
-		new = Place(venue_id=ven_id[0], name=row[0], permalink=row[1], lock_level=row[2], categories=row[3], number=row[4], street=row[5], city=row[6], state=row[7], country=row[8], updated_by=row[9], updated_on=row[10], user_report_on=row[11], is_residential=row[12])
+		new = Place(venueId=ven_id[0], name=row[0], permalink=row[1], lockLevel=row[2], categories=row[3], number=row[4], street=row[5], city=row[6], state=row[7], country=row[8], updatedBy=row[9], updatedOn=row[10], userReportOn=row[11], isResidential=row[12])
 		new.save()
 
 # File starts here
 if __name__ == '__main__':
 	import django
 	from django.conf import settings
-	
+
 	os.environ.setdefault("DJANGO_SETTINGS_MODULE", "wpda.settings")
 	django.setup()
 

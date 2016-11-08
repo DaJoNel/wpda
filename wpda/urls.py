@@ -21,7 +21,7 @@ from rest_framework.authtoken.views import obtain_auth_token
 from api import views
 from api.views import *
 
-router = routers.DefaultRouter()	# (trailing_slash=False)
+router = routers.DefaultRouter()
 router.register("profiles", ProfileViewSet)
 router.register("places", PlaceViewSet)
 

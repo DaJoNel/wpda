@@ -7,21 +7,15 @@
 /* jshint ignore:end */
 
 define('wpda-client/adapters/application', ['exports', 'ember-data', 'ember-simple-auth/mixins/data-adapter-mixin'], function (exports, _emberData, _emberSimpleAuthMixinsDataAdapterMixin) {
-	exports['default'] = _emberData['default'].RESTAdapter.extend(_emberSimpleAuthMixinsDataAdapterMixin['default'], {
+	exports['default'] = _emberData['default'].JSONAPIAdapter.extend(_emberSimpleAuthMixinsDataAdapterMixin['default'], {
 		namespace: 'api',
-		authorizer: 'authorizer:application'
-	});
-});
-define('wpda-client/adapters/drf', ['exports', 'ember', 'ember-django-adapter/adapters/drf', 'wpda-client/config/environment'], function (exports, _ember, _emberDjangoAdapterAdaptersDrf, _wpdaClientConfigEnvironment) {
-  exports['default'] = _emberDjangoAdapterAdaptersDrf['default'].extend({
-    host: _ember['default'].computed(function () {
-      return _wpdaClientConfigEnvironment['default'].APP.API_HOST;
-    }),
+		authorizer: 'authorizer:application',
 
-    namespace: _ember['default'].computed(function () {
-      return _wpdaClientConfigEnvironment['default'].APP.API_NAMESPACE;
-    })
-  });
+		// Ember does not append a trailing slash by default
+		buildURL: function buildURL(type, id, record) {
+			return this._super(type, id, record) + '/';
+		}
+	});
 });
 define('wpda-client/app', ['exports', 'ember', 'wpda-client/resolver', 'ember-load-initializers', 'wpda-client/config/environment'], function (exports, _ember, _wpdaClientResolver, _emberLoadInitializers, _wpdaClientConfigEnvironment) {
 
@@ -502,7 +496,7 @@ define('wpda-client/initializers/ember-data', ['exports', 'ember-data/setup-cont
       adapter: 'custom'
     });
   
-    App.PostsController = Ember.Controller.extend({
+    App.PostsController = Ember.ArrayController.extend({
       // ...
     });
   
@@ -656,20 +650,20 @@ define('wpda-client/instance-initializers/ember-simple-auth', ['exports', 'ember
 });
 define('wpda-client/models/place', ['exports', 'ember-data'], function (exports, _emberData) {
 	exports['default'] = _emberData['default'].Model.extend({
-		isVerified: _emberData['default'].attr('boolean,'),
-		venueId: _emberData['default'].attr('string,'),
-		name: _emberData['default'].attr('string,'),
-		permalink: _emberData['default'].attr('string,'),
-		lockLevel: _emberData['default'].attr('number,'),
-		categories: _emberData['default'].attr('string,'),
-		number: _emberData['default'].attr('string,'),
-		street: _emberData['default'].attr('string,'),
-		city: _emberData['default'].attr('string,'),
-		state: _emberData['default'].attr('string,'),
-		country: _emberData['default'].attr('string,'),
-		updatedBy: _emberData['default'].attr('string,'),
-		updatedOn: _emberData['default'].attr('date,'),
-		userReportOn: _emberData['default'].attr('date,'),
+		isVerified: _emberData['default'].attr('boolean'),
+		venueId: _emberData['default'].attr('string'),
+		name: _emberData['default'].attr('string'),
+		permalink: _emberData['default'].attr('string'),
+		lockLevel: _emberData['default'].attr('number'),
+		categories: _emberData['default'].attr('string'),
+		number: _emberData['default'].attr('string'),
+		street: _emberData['default'].attr('string'),
+		city: _emberData['default'].attr('string'),
+		state: _emberData['default'].attr('string'),
+		country: _emberData['default'].attr('string'),
+		updatedBy: _emberData['default'].attr('string'),
+		updatedOn: _emberData['default'].attr('date'),
+		userReportOn: _emberData['default'].attr('date'),
 		isResidential: _emberData['default'].attr('boolean')
 	});
 });
@@ -692,26 +686,20 @@ define('wpda-client/router', ['exports', 'ember', 'wpda-client/config/environmen
 define('wpda-client/routes/application', ['exports', 'ember', 'ember-simple-auth/mixins/application-route-mixin'], function (exports, _ember, _emberSimpleAuthMixinsApplicationRouteMixin) {
 	exports['default'] = _ember['default'].Route.extend(_emberSimpleAuthMixinsApplicationRouteMixin['default'], {
 		model: function model() {
-			// Does this need to match urls.py: router.register("places", PlaceViewSet) ?
 			return this.store.findAll('place');
-			/*return this.get('ajax').request('api/places/', {
-   	method: 'GET',
-   	dataType: 'html'
-   });*/
 		}
 	});
 });
 define('wpda-client/routes/profile', ['exports', 'ember', 'ember-simple-auth/mixins/authenticated-route-mixin'], function (exports, _ember, _emberSimpleAuthMixinsAuthenticatedRouteMixin) {
   exports['default'] = _ember['default'].Route.extend(_emberSimpleAuthMixinsAuthenticatedRouteMixin['default']);
 });
-define('wpda-client/serializers/application', ['exports', 'wpda-client/serializers/drf'], function (exports, _wpdaClientSerializersDrf) {
-  exports['default'] = _wpdaClientSerializersDrf['default'];
-});
-define('wpda-client/serializers/drf', ['exports', 'ember-django-adapter/serializers/drf'], function (exports, _emberDjangoAdapterSerializersDrf) {
-  exports['default'] = _emberDjangoAdapterSerializersDrf['default'];
-});
-define('wpda-client/serializers/place', ['exports', 'ember-data'], function (exports, _emberData) {
-  exports['default'] = _emberData['default'].JSONAPISerializer.extend({});
+define('wpda-client/serializers/application', ['exports', 'ember-data'], function (exports, _emberData) {
+    exports['default'] = _emberData['default'].JSONAPISerializer.extend({
+        // This is required to allow camelCase field names
+        keyForAttribute: function keyForAttribute(attr) {
+            return attr;
+        }
+    });
 });
 define('wpda-client/services/ajax', ['exports', 'ember-ajax/services/ajax'], function (exports, _emberAjaxServicesAjax) {
   Object.defineProperty(exports, 'default', {
@@ -731,7 +719,7 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -821,7 +809,7 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -873,7 +861,7 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
       var child0 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -915,7 +903,7 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -946,7 +934,7 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
           var el3 = dom.createElement("label");
           dom.setAttribute(el3, "class", "control-label");
           dom.setAttribute(el3, "for", "username");
-          var el4 = dom.createTextNode("Login");
+          var el4 = dom.createTextNode("Username");
           dom.appendChild(el3, el4);
           dom.appendChild(el2, el3);
           var el3 = dom.createTextNode("\n		");
@@ -1008,7 +996,7 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -1050,7 +1038,7 @@ define("wpda-client/templates/components/bs-accordion-item", ["exports"], functi
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1097,7 +1085,7 @@ define("wpda-client/templates/components/bs-accordion-item", ["exports"], functi
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -1168,7 +1156,7 @@ define("wpda-client/templates/components/bs-alert", ["exports"], function (expor
       var child0 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -1217,7 +1205,7 @@ define("wpda-client/templates/components/bs-alert", ["exports"], function (expor
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1259,7 +1247,7 @@ define("wpda-client/templates/components/bs-alert", ["exports"], function (expor
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -1301,7 +1289,7 @@ define("wpda-client/templates/components/bs-button", ["exports"], function (expo
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1340,7 +1328,7 @@ define("wpda-client/templates/components/bs-button", ["exports"], function (expo
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -1387,7 +1375,7 @@ define("wpda-client/templates/components/bs-form-element", ["exports"], function
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -1429,7 +1417,7 @@ define("wpda-client/templates/components/bs-form-group", ["exports"], function (
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1471,7 +1459,7 @@ define("wpda-client/templates/components/bs-form-group", ["exports"], function (
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -1517,7 +1505,7 @@ define("wpda-client/templates/components/bs-form", ["exports"], function (export
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -1559,7 +1547,7 @@ define("wpda-client/templates/components/bs-modal-dialog", ["exports"], function
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1601,7 +1589,7 @@ define("wpda-client/templates/components/bs-modal-dialog", ["exports"], function
       var child0 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -1641,7 +1629,7 @@ define("wpda-client/templates/components/bs-modal-dialog", ["exports"], function
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1680,7 +1668,7 @@ define("wpda-client/templates/components/bs-modal-dialog", ["exports"], function
     var child2 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1721,7 +1709,7 @@ define("wpda-client/templates/components/bs-modal-dialog", ["exports"], function
     var child3 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1761,7 +1749,7 @@ define("wpda-client/templates/components/bs-modal-dialog", ["exports"], function
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -1825,7 +1813,7 @@ define("wpda-client/templates/components/bs-modal-footer", ["exports"], function
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -1868,7 +1856,7 @@ define("wpda-client/templates/components/bs-modal-footer", ["exports"], function
         var child0 = (function () {
           return {
             meta: {
-              "revision": "Ember@2.9.0",
+              "revision": "Ember@2.8.3",
               "loc": {
                 "source": null,
                 "start": {
@@ -1907,7 +1895,7 @@ define("wpda-client/templates/components/bs-modal-footer", ["exports"], function
         var child1 = (function () {
           return {
             meta: {
-              "revision": "Ember@2.9.0",
+              "revision": "Ember@2.8.3",
               "loc": {
                 "source": null,
                 "start": {
@@ -1945,7 +1933,7 @@ define("wpda-client/templates/components/bs-modal-footer", ["exports"], function
         })();
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -1992,7 +1980,7 @@ define("wpda-client/templates/components/bs-modal-footer", ["exports"], function
         var child0 = (function () {
           return {
             meta: {
-              "revision": "Ember@2.9.0",
+              "revision": "Ember@2.8.3",
               "loc": {
                 "source": null,
                 "start": {
@@ -2030,7 +2018,7 @@ define("wpda-client/templates/components/bs-modal-footer", ["exports"], function
         })();
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -2070,7 +2058,7 @@ define("wpda-client/templates/components/bs-modal-footer", ["exports"], function
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2108,7 +2096,7 @@ define("wpda-client/templates/components/bs-modal-footer", ["exports"], function
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -2150,7 +2138,7 @@ define("wpda-client/templates/components/bs-modal-header", ["exports"], function
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2200,7 +2188,7 @@ define("wpda-client/templates/components/bs-modal-header", ["exports"], function
     var child1 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2241,7 +2229,7 @@ define("wpda-client/templates/components/bs-modal-header", ["exports"], function
     var child2 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2284,7 +2272,7 @@ define("wpda-client/templates/components/bs-modal-header", ["exports"], function
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -2330,7 +2318,7 @@ define("wpda-client/templates/components/bs-modal", ["exports"], function (expor
       var child0 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -2371,7 +2359,7 @@ define("wpda-client/templates/components/bs-modal", ["exports"], function (expor
       var child1 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -2413,7 +2401,7 @@ define("wpda-client/templates/components/bs-modal", ["exports"], function (expor
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2462,7 +2450,7 @@ define("wpda-client/templates/components/bs-modal", ["exports"], function (expor
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -2505,7 +2493,7 @@ define("wpda-client/templates/components/bs-progress-bar", ["exports"], function
       var child0 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -2546,7 +2534,7 @@ define("wpda-client/templates/components/bs-progress-bar", ["exports"], function
       var child1 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -2586,7 +2574,7 @@ define("wpda-client/templates/components/bs-progress-bar", ["exports"], function
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2626,7 +2614,7 @@ define("wpda-client/templates/components/bs-progress-bar", ["exports"], function
       var child0 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -2670,7 +2658,7 @@ define("wpda-client/templates/components/bs-progress-bar", ["exports"], function
       var child1 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -2715,7 +2703,7 @@ define("wpda-client/templates/components/bs-progress-bar", ["exports"], function
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2754,7 +2742,7 @@ define("wpda-client/templates/components/bs-progress-bar", ["exports"], function
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -2796,7 +2784,7 @@ define("wpda-client/templates/components/bs-progress", ["exports"], function (ex
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -2839,7 +2827,7 @@ define("wpda-client/templates/components/bs-select", ["exports"], function (expo
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2889,7 +2877,7 @@ define("wpda-client/templates/components/bs-select", ["exports"], function (expo
     var child1 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -2938,7 +2926,7 @@ define("wpda-client/templates/components/bs-select", ["exports"], function (expo
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -2985,7 +2973,7 @@ define("wpda-client/templates/components/form-element/errors", ["exports"], func
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -3028,7 +3016,7 @@ define("wpda-client/templates/components/form-element/errors", ["exports"], func
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -3070,7 +3058,7 @@ define("wpda-client/templates/components/form-element/feedback-icon", ["exports"
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -3112,7 +3100,7 @@ define("wpda-client/templates/components/form-element/feedback-icon", ["exports"
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -3153,7 +3141,7 @@ define("wpda-client/templates/components/form-element/horizontal/checkbox", ["ex
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -3226,7 +3214,7 @@ define("wpda-client/templates/components/form-element/horizontal/default", ["exp
       var child0 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -3267,7 +3255,7 @@ define("wpda-client/templates/components/form-element/horizontal/default", ["exp
       var child1 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -3307,7 +3295,7 @@ define("wpda-client/templates/components/form-element/horizontal/default", ["exp
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -3377,7 +3365,7 @@ define("wpda-client/templates/components/form-element/horizontal/default", ["exp
       var child0 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -3418,7 +3406,7 @@ define("wpda-client/templates/components/form-element/horizontal/default", ["exp
       var child1 = (function () {
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -3458,7 +3446,7 @@ define("wpda-client/templates/components/form-element/horizontal/default", ["exp
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -3516,7 +3504,7 @@ define("wpda-client/templates/components/form-element/horizontal/default", ["exp
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -3558,7 +3546,7 @@ define("wpda-client/templates/components/form-element/horizontal/select", ["expo
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -3627,7 +3615,7 @@ define("wpda-client/templates/components/form-element/horizontal/select", ["expo
     var child1 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -3685,7 +3673,7 @@ define("wpda-client/templates/components/form-element/horizontal/select", ["expo
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -3727,7 +3715,7 @@ define("wpda-client/templates/components/form-element/horizontal/textarea", ["ex
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -3796,7 +3784,7 @@ define("wpda-client/templates/components/form-element/horizontal/textarea", ["ex
     var child1 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -3854,7 +3842,7 @@ define("wpda-client/templates/components/form-element/horizontal/textarea", ["ex
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -3895,7 +3883,7 @@ define("wpda-client/templates/components/form-element/inline/checkbox", ["export
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -3954,7 +3942,7 @@ define("wpda-client/templates/components/form-element/inline/default", ["exports
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4000,7 +3988,7 @@ define("wpda-client/templates/components/form-element/inline/default", ["exports
     var child1 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4041,7 +4029,7 @@ define("wpda-client/templates/components/form-element/inline/default", ["exports
     var child2 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4081,7 +4069,7 @@ define("wpda-client/templates/components/form-element/inline/default", ["exports
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -4130,7 +4118,7 @@ define("wpda-client/templates/components/form-element/inline/select", ["exports"
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4175,7 +4163,7 @@ define("wpda-client/templates/components/form-element/inline/select", ["exports"
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -4226,7 +4214,7 @@ define("wpda-client/templates/components/form-element/inline/textarea", ["export
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4271,7 +4259,7 @@ define("wpda-client/templates/components/form-element/inline/textarea", ["export
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -4326,7 +4314,7 @@ define("wpda-client/templates/components/form-element/vertical/checkbox", ["expo
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -4391,7 +4379,7 @@ define("wpda-client/templates/components/form-element/vertical/default", ["expor
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4437,7 +4425,7 @@ define("wpda-client/templates/components/form-element/vertical/default", ["expor
     var child1 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4478,7 +4466,7 @@ define("wpda-client/templates/components/form-element/vertical/default", ["expor
     var child2 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4518,7 +4506,7 @@ define("wpda-client/templates/components/form-element/vertical/default", ["expor
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -4572,7 +4560,7 @@ define("wpda-client/templates/components/form-element/vertical/select", ["export
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4617,7 +4605,7 @@ define("wpda-client/templates/components/form-element/vertical/select", ["export
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -4673,7 +4661,7 @@ define("wpda-client/templates/components/form-element/vertical/textarea", ["expo
     var child0 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4718,7 +4706,7 @@ define("wpda-client/templates/components/form-element/vertical/textarea", ["expo
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -4773,9 +4761,183 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
   exports["default"] = Ember.HTMLBars.template((function () {
     var child0 = (function () {
       var child0 = (function () {
+        var child0 = (function () {
+          return {
+            meta: {
+              "revision": "Ember@2.8.3",
+              "loc": {
+                "source": null,
+                "start": {
+                  "line": 22,
+                  "column": 12
+                },
+                "end": {
+                  "line": 24,
+                  "column": 12
+                }
+              },
+              "moduleName": "wpda-client/templates/components/place-list.hbs"
+            },
+            isEmpty: false,
+            arity: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            buildFragment: function buildFragment(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("            ");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createElement("td");
+              var el2 = dom.createElement("input");
+              dom.setAttribute(el2, "type", "checkbox");
+              dom.setAttribute(el2, "checked", "");
+              dom.setAttribute(el2, "disabled", "");
+              dom.appendChild(el1, el2);
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            buildRenderNodes: function buildRenderNodes() {
+              return [];
+            },
+            statements: [],
+            locals: [],
+            templates: []
+          };
+        })();
+        var child1 = (function () {
+          return {
+            meta: {
+              "revision": "Ember@2.8.3",
+              "loc": {
+                "source": null,
+                "start": {
+                  "line": 24,
+                  "column": 12
+                },
+                "end": {
+                  "line": 26,
+                  "column": 12
+                }
+              },
+              "moduleName": "wpda-client/templates/components/place-list.hbs"
+            },
+            isEmpty: false,
+            arity: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            buildFragment: function buildFragment(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("            ");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createElement("td");
+              var el2 = dom.createElement("input");
+              dom.setAttribute(el2, "type", "checkbox");
+              dom.setAttribute(el2, "disabled", "");
+              dom.appendChild(el1, el2);
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            buildRenderNodes: function buildRenderNodes() {
+              return [];
+            },
+            statements: [],
+            locals: [],
+            templates: []
+          };
+        })();
+        var child2 = (function () {
+          return {
+            meta: {
+              "revision": "Ember@2.8.3",
+              "loc": {
+                "source": null,
+                "start": {
+                  "line": 35,
+                  "column": 12
+                },
+                "end": {
+                  "line": 37,
+                  "column": 12
+                }
+              },
+              "moduleName": "wpda-client/templates/components/place-list.hbs"
+            },
+            isEmpty: false,
+            arity: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            buildFragment: function buildFragment(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("            ");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createElement("td");
+              var el2 = dom.createElement("input");
+              dom.setAttribute(el2, "type", "checkbox");
+              dom.setAttribute(el2, "checked", "");
+              dom.setAttribute(el2, "disabled", "");
+              dom.appendChild(el1, el2);
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            buildRenderNodes: function buildRenderNodes() {
+              return [];
+            },
+            statements: [],
+            locals: [],
+            templates: []
+          };
+        })();
+        var child3 = (function () {
+          return {
+            meta: {
+              "revision": "Ember@2.8.3",
+              "loc": {
+                "source": null,
+                "start": {
+                  "line": 37,
+                  "column": 12
+                },
+                "end": {
+                  "line": 39,
+                  "column": 12
+                }
+              },
+              "moduleName": "wpda-client/templates/components/place-list.hbs"
+            },
+            isEmpty: false,
+            arity: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            buildFragment: function buildFragment(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("            ");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createElement("td");
+              var el2 = dom.createElement("input");
+              dom.setAttribute(el2, "type", "checkbox");
+              dom.setAttribute(el2, "disabled", "");
+              dom.appendChild(el1, el2);
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            buildRenderNodes: function buildRenderNodes() {
+              return [];
+            },
+            statements: [],
+            locals: [],
+            templates: []
+          };
+        })();
         return {
           meta: {
-            "revision": "Ember@2.9.0",
+            "revision": "Ember@2.8.3",
             "loc": {
               "source": null,
               "start": {
@@ -4783,7 +4945,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
                 "column": 4
               },
               "end": {
-                "line": 33,
+                "line": 41,
                 "column": 4
               }
             },
@@ -4798,13 +4960,11 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             var el1 = dom.createTextNode("        ");
             dom.appendChild(el0, el1);
             var el1 = dom.createElement("tr");
-            var el2 = dom.createTextNode("\n            ");
+            var el2 = dom.createTextNode("\n");
             dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
+            var el2 = dom.createComment("");
             dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n            ");
+            var el2 = dom.createTextNode("            ");
             dom.appendChild(el1, el2);
             var el2 = dom.createElement("td");
             var el3 = dom.createElement("a");
@@ -4858,13 +5018,11 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             var el3 = dom.createComment("");
             dom.appendChild(el2, el3);
             dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n            ");
+            var el2 = dom.createTextNode("\n");
             dom.appendChild(el1, el2);
-            var el2 = dom.createElement("td");
-            var el3 = dom.createComment("");
-            dom.appendChild(el2, el3);
+            var el2 = dom.createComment("");
             dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n        ");
+            var el2 = dom.createTextNode("        ");
             dom.appendChild(el1, el2);
             dom.appendChild(el0, el1);
             var el1 = dom.createTextNode("\n");
@@ -4876,7 +5034,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             var element1 = dom.childAt(element0, [3, 0]);
             var element2 = dom.childAt(element0, [15]);
             var morphs = new Array(12);
-            morphs[0] = dom.createMorphAt(dom.childAt(element0, [1]), 0, 0);
+            morphs[0] = dom.createMorphAt(element0, 1, 1);
             morphs[1] = dom.createAttrMorph(element1, 'href');
             morphs[2] = dom.createMorphAt(element1, 0, 0);
             morphs[3] = dom.createMorphAt(dom.childAt(element0, [5]), 0, 0);
@@ -4887,17 +5045,17 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             morphs[8] = dom.createMorphAt(element2, 0, 0);
             morphs[9] = dom.createMorphAt(element2, 2, 2);
             morphs[10] = dom.createMorphAt(dom.childAt(element0, [17]), 0, 0);
-            morphs[11] = dom.createMorphAt(dom.childAt(element0, [19]), 0, 0);
+            morphs[11] = dom.createMorphAt(element0, 19, 19);
             return morphs;
           },
-          statements: [["content", "place.isVerified", ["loc", [null, [22, 16], [22, 36]]], 0, 0, 0, 0], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [23, 27], [23, 42]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [23, 46], [23, 60]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [24, 16], [24, 32]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [25, 16], [25, 32]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [26, 16], [26, 30]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [27, 16], [27, 31]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [28, 16], [28, 36]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [29, 16], [29, 35]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [29, 39], [29, 58]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [30, 16], [30, 35]]], 0, 0, 0, 0], ["content", "place.isResidential", ["loc", [null, [31, 16], [31, 39]]], 0, 0, 0, 0]],
+          statements: [["block", "if", [["get", "place.isVerified", ["loc", [null, [22, 18], [22, 34]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [22, 12], [26, 19]]]], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [27, 27], [27, 42]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [27, 46], [27, 60]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [28, 16], [28, 32]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [29, 16], [29, 32]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [30, 16], [30, 30]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [31, 16], [31, 31]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [32, 16], [32, 36]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [33, 16], [33, 35]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [33, 39], [33, 58]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [34, 16], [34, 35]]], 0, 0, 0, 0], ["block", "if", [["get", "place.isResidential", ["loc", [null, [35, 18], [35, 37]]], 0, 0, 0, 0]], [], 2, 3, ["loc", [null, [35, 12], [39, 19]]]]],
           locals: ["place"],
-          templates: []
+          templates: [child0, child1, child2, child3]
         };
       })();
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
@@ -4905,7 +5063,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
               "column": 0
             },
             "end": {
-              "line": 36,
+              "line": 44,
               "column": 0
             }
           },
@@ -5017,7 +5175,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
           morphs[0] = dom.createMorphAt(dom.childAt(fragment, [0, 3]), 1, 1);
           return morphs;
         },
-        statements: [["block", "each", [["get", "model", ["loc", [null, [20, 12], [20, 17]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [20, 4], [33, 13]]]]],
+        statements: [["block", "each", [["get", "model", ["loc", [null, [20, 12], [20, 17]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [20, 4], [41, 13]]]]],
         locals: [],
         templates: [child0]
       };
@@ -5025,15 +5183,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
     var child1 = (function () {
       return {
         meta: {
-          "revision": "Ember@2.9.0",
+          "revision": "Ember@2.8.3",
           "loc": {
             "source": null,
             "start": {
-              "line": 36,
+              "line": 44,
               "column": 0
             },
             "end": {
-              "line": 38,
+              "line": 46,
               "column": 0
             }
           },
@@ -5063,7 +5221,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
     })();
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -5071,7 +5229,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             "column": 0
           },
           "end": {
-            "line": 39,
+            "line": 47,
             "column": 0
           }
         },
@@ -5107,7 +5265,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
         dom.insertBoundary(fragment, null);
         return morphs;
       },
-      statements: [["block", "if", [["get", "model.length", ["loc", [null, [3, 6], [3, 18]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [3, 0], [38, 7]]]]],
+      statements: [["block", "if", [["get", "model.length", ["loc", [null, [3, 6], [3, 18]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [3, 0], [46, 7]]]]],
       locals: [],
       templates: [child0, child1]
     };
@@ -5117,7 +5275,7 @@ define("wpda-client/templates/profile", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
       meta: {
-        "revision": "Ember@2.9.0",
+        "revision": "Ember@2.8.3",
         "loc": {
           "source": null,
           "start": {
@@ -5186,7 +5344,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+b2e2cb6e","API_HOST":"http://localhost:8000","API_NAMESPACE":"api","API_ADD_TRAILING_SLASHES":true});
+  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+76bf5eb7"});
 }
 
 /* jshint ignore:end */

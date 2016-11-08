@@ -206,7 +206,7 @@ define('wpda-client/tests/integration/components/auth-manager-test', ['exports',
     this.render(Ember.HTMLBars.template((function () {
       return {
         meta: {
-          'revision': 'Ember@2.9.0',
+          'revision': 'Ember@2.8.3',
           'loc': {
             'source': null,
             'start': {
@@ -249,7 +249,7 @@ define('wpda-client/tests/integration/components/auth-manager-test', ['exports',
       var child0 = (function () {
         return {
           meta: {
-            'revision': 'Ember@2.9.0',
+            'revision': 'Ember@2.8.3',
             'loc': {
               'source': null,
               'start': {
@@ -283,7 +283,7 @@ define('wpda-client/tests/integration/components/auth-manager-test', ['exports',
 
       return {
         meta: {
-          'revision': 'Ember@2.9.0',
+          'revision': 'Ember@2.8.3',
           'loc': {
             'source': null,
             'start': {
@@ -346,7 +346,7 @@ define('wpda-client/tests/integration/components/place-list-test', ['exports', '
     this.render(Ember.HTMLBars.template((function () {
       return {
         meta: {
-          'revision': 'Ember@2.9.0',
+          'revision': 'Ember@2.8.3',
           'loc': {
             'source': null,
             'start': {
@@ -389,7 +389,7 @@ define('wpda-client/tests/integration/components/place-list-test', ['exports', '
       var child0 = (function () {
         return {
           meta: {
-            'revision': 'Ember@2.9.0',
+            'revision': 'Ember@2.8.3',
             'loc': {
               'source': null,
               'start': {
@@ -423,7 +423,7 @@ define('wpda-client/tests/integration/components/place-list-test', ['exports', '
 
       return {
         meta: {
-          'revision': 'Ember@2.9.0',
+          'revision': 'Ember@2.8.3',
           'loc': {
             'source': null,
             'start': {
@@ -518,13 +518,13 @@ define('wpda-client/tests/routes/profile.jshint', ['exports'], function (exports
     assert.ok(true, 'routes/profile.js should pass jshint.');
   });
 });
-define('wpda-client/tests/serializers/place.jshint', ['exports'], function (exports) {
+define('wpda-client/tests/serializers/application.jshint', ['exports'], function (exports) {
   'use strict';
 
-  QUnit.module('JSHint | serializers/place.js');
+  QUnit.module('JSHint | serializers/application.js');
   QUnit.test('should pass jshint', function (assert) {
     assert.expect(1);
-    assert.ok(true, 'serializers/place.js should pass jshint.');
+    assert.ok(true, 'serializers/application.js should pass jshint.');
   });
 });
 define('wpda-client/tests/test-helper', ['exports', 'wpda-client/tests/helpers/resolver', 'ember-qunit'], function (exports, _wpdaClientTestsHelpersResolver, _emberQunit) {
@@ -626,11 +626,11 @@ define('wpda-client/tests/unit/routes/profile-test.jshint', ['exports'], functio
     assert.ok(true, 'unit/routes/profile-test.js should pass jshint.');
   });
 });
-define('wpda-client/tests/unit/serializers/place-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
+define('wpda-client/tests/unit/serializers/application-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
 
-  (0, _emberQunit.moduleForModel)('place', 'Unit | Serializer | place', {
+  (0, _emberQunit.moduleForModel)('application', 'Unit | Serializer | application', {
     // Specify the other units that are required for this test.
-    needs: ['serializer:place']
+    needs: ['serializer:application']
   });
 
   // Replace this with your real tests.
@@ -642,13 +642,13 @@ define('wpda-client/tests/unit/serializers/place-test', ['exports', 'ember-qunit
     assert.ok(serializedRecord);
   });
 });
-define('wpda-client/tests/unit/serializers/place-test.jshint', ['exports'], function (exports) {
+define('wpda-client/tests/unit/serializers/application-test.jshint', ['exports'], function (exports) {
   'use strict';
 
-  QUnit.module('JSHint | unit/serializers/place-test.js');
+  QUnit.module('JSHint | unit/serializers/application-test.js');
   QUnit.test('should pass jshint', function (assert) {
     assert.expect(1);
-    assert.ok(true, 'unit/serializers/place-test.js should pass jshint.');
+    assert.ok(true, 'unit/serializers/application-test.js should pass jshint.');
   });
 });
 /* jshint ignore:start */

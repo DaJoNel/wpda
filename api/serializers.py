@@ -10,14 +10,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 	#user = UserSerializer()
 	class Meta:
 		model = Profile
-		fields = ('waze_id', )
+		fields = ('wazeId', )
 
 class PlaceSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Place
-		fields = ('is_verified', 'venue_id', 'name', 'permalink', 'lock_level', 
-			'categories', 'number', 'street', 'city', 'state', 'country', 
-			'updated_by', 'updated_on', 'user_report_on', 'is_residential')
+		fields = ('isVerified', 'venueId', 'name', 'permalink', 'lockLevel', 
+			'categories', 'number', 'street', 'city', 'state', 'country',
+			'updatedBy', 'updatedOn', 'userReportOn', 'isResidential')
 	'''
 	def validate_name(self, value):
 		if '' not in value.lower():
