@@ -16,14 +16,14 @@ def scrape():
 	country = 235
 
 	payload = {"vname": search, "regex": use_regex, "ignorecase": ignore_case, "lock": max_lock, "country": country, "submit": "Search"}
-	#scrape = requests.post("https://db.slickbox.net/venues.php", data = payload)
-	scrape = open("/home/dnelson/Desktop/Hy-Vee.html").read()
+	scrape = requests.post("https://db.slickbox.net/venues.php", data = payload)
+	#scrape = open("/home/dnelson/Desktop/Hy-Vee.html").read()
 
 	# ------------------------------------- Parse the HTML Output -------------------------------------- #
 
 	# Find where the relevant data begins and ends in the HTML output
-	data = scrape[scrape.find('<tr id="link"'):scrape.rfind('</table>')]
-	#data = scrape.text[scrape.text.find('<tr id="link"'):scrape.text.rfind('</table>')]
+	#data = scrape[scrape.find('<tr id="link"'):scrape.rfind('</table>')]
+	data = scrape.text[scrape.text.find('<tr id="link"'):scrape.text.rfind('</table>')]
 
 	# Fill empty fields with text to prevent BS from erasing them, then initialize BS
 	data = data.replace("<td></td>", "<td>(NULL)</td>")
