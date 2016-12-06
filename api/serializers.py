@@ -15,9 +15,9 @@ class ProfileSerializer(serializers.ModelSerializer):
 class PlaceSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Place
-		fields = ('isVerified', 'venueId', 'name', 'permalink', 'lockLevel', 
-			'categories', 'number', 'street', 'city', 'state', 'country',
-			'updatedBy', 'updatedOn', 'userReportOn', 'isResidential')
+		fields = ('isVerified', 'venueId', 'name', 'permalink', 'lockLevel',
+			'categories', 'number', 'street', 'city', 'state', 'country', 'createdBy',
+			'createdOn', 'updatedBy', 'updatedOn', 'updateRequest', 'isResidential')
 	'''
 	def validate_name(self, value):
 		if '' not in value.lower():
