@@ -74,8 +74,6 @@ def scrape():
 		else:
 			row[13] = False
 
-		print(row[10])
-
 		# Add the row to the database
 		new = Place(venueId=ven_id[0], name=row[0], permalink=row[1], lockLevel=row[2],
 		categories=row[3], number=row[4], street=row[5], city=row[6], state=row[7],
