@@ -6,13 +6,14 @@ USERNAME=`whoami`
 PASSWORD=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 
 # Set the MySQL password
-sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password $PASSWORD'
-sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password $PASSWORD'
+sudo debconf-set-selections <<< "mysql-server mysql-server/root_password password $PASSWORD"
+sudo debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $PASSWORD"
 
 # Add Node v6 repository
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
 
 # Install apt dependencies
+sudo rm /var/lib/dpkg/lock
 sudo apt install -y git python-dev python-pip nodejs build-essential \
 autoconf apache2 mysql-server libapache2-mod-wsgi libmysqlclient-dev
 
@@ -38,7 +39,7 @@ sudo rm -rf watchman
 sudo ufw allow in "Apache Full"
 
 # Set up MySQL so Django can use it
-mysql -u"root" -p"$PASSWORD" -e "create database wpdaDB;"
+mysql -u"root" -p$PASSWORD -e "create database wpdaDB;"
 sudo /bin/cp -rf $BASE_PATH/my.cnf /etc/mysql/
 sudo chmod 644 /etc/mysql/my.cnf
 
@@ -73,7 +74,7 @@ python manage.py migrate
 python scraper.py
 
 clear
-echo "The MySQL password is"
-echo "--------------------"
+echo "MySQL password (retain for records):"
+echo "|----------------------------------|"
 echo "| $PASSWORD |"
-echo "--------------------"
+echo "|----------------------------------|"
