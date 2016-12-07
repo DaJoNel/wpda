@@ -3,7 +3,7 @@
 # Set bash variables
 BASE_PATH=$PWD
 USERNAME=`whoami`
-PASSWORD=< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-16};
+PASSWORD=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 
 # Set the MySQL password
 sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password $PASSWORD'
