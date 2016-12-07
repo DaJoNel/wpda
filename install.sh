@@ -13,7 +13,6 @@ sudo debconf-set-selections <<< "mysql-server mysql-server/root_password_again p
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
 
 # Install apt dependencies
-sudo rm /var/lib/dpkg/lock
 sudo apt install -y git python-dev python-pip nodejs build-essential \
 autoconf apache2 mysql-server libapache2-mod-wsgi libmysqlclient-dev
 
@@ -40,6 +39,7 @@ sudo ufw allow in "Apache Full"
 
 # Set up MySQL so Django can use it
 mysql -u"root" -p$PASSWORD -e "create database wpdaDB;"
+sudo sed -i -e "s/\<passwd_holder\>/$PASSWORD/g" $BASE_PATH/my.cnf
 sudo /bin/cp -rf $BASE_PATH/my.cnf /etc/mysql/
 sudo chmod 644 /etc/mysql/my.cnf
 
