@@ -3,10 +3,11 @@
 # Set bash variables
 BASE_PATH=$PWD
 USERNAME=`whoami`
+PASSWORD=< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-16};
 
 # Set the MySQL password
-sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password wpdaT3st5erver'
-sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password wpdaT3st5erver'
+sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password $PASSWORD'
+sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password $PASSWORD'
 
 # Add Node v6 repository
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
@@ -37,7 +38,7 @@ sudo rm -rf watchman
 sudo ufw allow in "Apache Full"
 
 # Set up MySQL so Django can use it
-mysql -u"root" -p"wpdaT3st5erver" -e "create database wpdaDB;"
+mysql -u"root" -p"$PASSWORD" -e "create database wpdaDB;"
 sudo /bin/cp -rf $BASE_PATH/my.cnf /etc/mysql/
 sudo chmod 644 /etc/mysql/my.cnf
 
@@ -70,3 +71,9 @@ python manage.py migrate
 
 # Download some Waze Place data
 python scraper.py
+
+clear
+echo "The MySQL password is"
+echo "--------------------"
+echo "| $PASSWORD |"
+echo "--------------------"
