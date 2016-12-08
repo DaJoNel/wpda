@@ -72,7 +72,7 @@ python manage.py makemigrations
 python manage.py migrate
 
 # Download some Waze Place data (e.g. Hy-Vee; note the use of regex)
-python scraper.py "hy[ -]?vee"
+python manage.py scrape "hy[ -]?vee"
 
 # Report the MySQL root password to the user
 echo -e "\n\n\n  MySQL password (retain for records):"
