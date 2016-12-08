@@ -25,8 +25,8 @@ markdown django-filter mysqlclient beautifulsoup4 requests iso8601
 sudo npm install -g npm bower phantomjs-prebuilt ember-cli@2.8
 
 # Install watchman and clean up
-git clone https://github.com/facebook/watchman.git
-cd watchman/
+git clone https://github.com/facebook/watchman.git /var/www/watchman/
+cd /var/www/watchman/
 git checkout v4.7.0
 ./autogen.sh
 ./configure --with-python
@@ -73,8 +73,7 @@ python manage.py migrate
 # Download some Waze Place data
 python scraper.py
 
-clear
-echo "MySQL password (retain for records):"
+echo "\n\nMySQL password (retain for records):"
 echo "|----------------------------------|"
 echo "| $PASSWORD |"
-echo "|----------------------------------|"
+echo "|----------------------------------|\n\n"
