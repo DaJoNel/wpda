@@ -3,6 +3,8 @@
 # Set bash variables
 BASE_PATH=$PWD
 USERNAME=`whoami`
+
+# Dynamically generate the MySQL password
 PASSWORD=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 
 # Set the MySQL password
@@ -24,9 +26,9 @@ markdown django-filter mysqlclient beautifulsoup4 requests iso8601
 # Update npm list and install dependencies
 sudo npm install -g npm bower phantomjs-prebuilt ember-cli@2.8
 
-# Install watchman and clean up
-sudo git clone https://github.com/facebook/watchman.git /var/www/watchman/
-cd /var/www/watchman/
+# Install watchman from source and clean up afterword
+git clone https://github.com/facebook/watchman.git ~/watchman/
+cd ~/watchman/
 git checkout v4.7.0
 ./autogen.sh
 ./configure --with-python
@@ -37,10 +39,10 @@ sudo rm -rf watchman
 # Allow Apache traffic through the firewall
 sudo ufw allow in "Apache Full"
 
-# Set up MySQL so Django can use it
+# Set up MySQL so Django can use it (password holder is a bit of a hack)
 mysql -u"root" -p$PASSWORD -e "create database wpdaDB;"
-sudo sed -i -e "s/\<passwd_holder\>/$PASSWORD/g" $BASE_PATH/my.cnf
-sudo /bin/cp -rf $BASE_PATH/my.cnf /etc/mysql/
+sudo sed -i -e "s/\<passwd_holder\>/$PASSWORD/g" $BASE_PATH/server_config/my.cnf
+sudo /bin/cp -rf $BASE_PATH/server_config/my.cnf /etc/mysql/
 sudo chmod 644 /etc/mysql/my.cnf
 
 # Download the WPDA client files
@@ -52,7 +54,7 @@ sudo find /var/www/ -type d -exec chmod 775 {} +
 sudo find /var/www/ -type f -exec chmod 664 {} +
 
 # Configure Apache to serve Django
-sudo /bin/cp -rf $BASE_PATH/django.conf /etc/apache2/sites-available/
+sudo /bin/cp -rf $BASE_PATH/server_config/django.conf /etc/apache2/sites-available/
 sudo chmod 644 /etc/apache2/sites-available/django.conf
 sudo a2ensite django
 sudo a2dissite 000-default
@@ -69,10 +71,11 @@ cd /var/www/wpda-server/
 python manage.py makemigrations
 python manage.py migrate
 
-# Download some Waze Place data
-python scraper.py
+# Download some Waze Place data (e.g. Hy-Vee; note the use of regex)
+python scraper.py "hy[ -]?vee"
 
-echo "\n\nMySQL password (retain for records):"
-echo "|----------------------------------|"
-echo "| $PASSWORD |"
-echo "|----------------------------------|\n\n"
+# Report the MySQL root password to the user
+echo -e "\n\n\n  MySQL password (retain for records):"
+echo "  |----------------------------------|"
+echo "  | $PASSWORD |"
+echo -e "  |----------------------------------|\n\n\n"

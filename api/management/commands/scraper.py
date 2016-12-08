@@ -1,6 +1,6 @@
 #
 # Waze Place Discover & Audit (WPDA)
-# Version 1.0, 2016-10-31
+# Version 1.1, 2016-12-07
 # Copyright 2016 David Nelson. All rights reserved.
 #
 
@@ -8,21 +8,19 @@ from bs4 import BeautifulSoup
 import sys, requests, re, os, iso8601
 
 def scrape():
-	# Inital setup
-	search = "hy[ -]?vee"
+	# Setup search query
+	venue = sys.argv[1]
 	use_regex = 1
 	ignore_case = 1
 	max_lock = 6
 	country = 235
 
-	payload = {"vname": search, "regex": use_regex, "ignorecase": ignore_case, "lock": max_lock, "country": country, "submit": "Search"}
+	payload = {"vname": venue, "regex": use_regex, "ignorecase": ignore_case, "lock": max_lock, "country": country, "submit": "Search"}
 	scrape = requests.post("https://db.slickbox.net/venues.php", data = payload)
-	#scrape = open("/home/dnelson/Desktop/Hy-Vee-3.html").read()
 
 	# ------------------------------------- Parse the HTML Output -------------------------------------- #
 
 	# Find where the relevant data begins and ends in the HTML output
-	#data = scrape[scrape.find('<tr id="link"'):scrape.rfind('</table>')]
 	data = scrape.text[scrape.text.find('<tr id="link"'):scrape.text.rfind('</table>')]
 
 	# Fill empty fields with text to prevent BS from erasing them, then initialize BS
@@ -89,5 +87,8 @@ if __name__ == '__main__':
 	os.environ.setdefault("DJANGO_SETTINGS_MODULE", "wpda.settings")
 	django.setup()
 
-	from api.models import Place
-	scrape()
+	if len(sys.argv) != 2:
+		sys.exit("Usage (quotes matter):\n    python scraper.py \"[venue regex]\"\n")
+	else:
+		from api.models import Place
+		scrape()
