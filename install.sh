@@ -25,8 +25,8 @@ markdown django-filter mysqlclient beautifulsoup4 requests iso8601
 sudo npm install -g npm bower phantomjs-prebuilt ember-cli@2.8
 
 # Install watchman and clean up
-git clone https://github.com/facebook/watchman.git
-cd watchman/
+sudo git clone https://github.com/facebook/watchman.git /var/www/watchman/
+cd /var/www/watchman/
 git checkout v4.7.0
 ./autogen.sh
 ./configure --with-python
@@ -43,8 +43,7 @@ sudo sed -i -e "s/\<passwd_holder\>/$PASSWORD/g" $BASE_PATH/my.cnf
 sudo /bin/cp -rf $BASE_PATH/my.cnf /etc/mysql/
 sudo chmod 644 /etc/mysql/my.cnf
 
-# Clean up default HTML files and download WPDA client files
-sudo rm -rf /var/www/html/
+# Download the WPDA client files
 sudo git clone https://github.com/DaJoNel/wpda-client.git /var/www/wpda-client/
 
 # Fix permissions
@@ -73,8 +72,7 @@ python manage.py migrate
 # Download some Waze Place data
 python scraper.py
 
-clear
-echo "MySQL password (retain for records):"
+echo "\n\nMySQL password (retain for records):"
 echo "|----------------------------------|"
 echo "| $PASSWORD |"
-echo "|----------------------------------|"
+echo "|----------------------------------|\n\n"
