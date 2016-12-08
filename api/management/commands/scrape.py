@@ -4,59 +4,54 @@
 # Copyright 2016 David Nelson. All rights reserved.
 #
 
-from bs4 import BeautifulSoup
 import sys, requests, re, os, iso8601
-
 from django.core.management.base import BaseCommand, CommandError
 from api.models import Place
 
 class Command(BaseCommand):
-	args = "\"[regex]\" (quotes matter)"
 	help = "WPDA place data scraper."
 
-	def scrape(self):
+	def scrape(self, regex):
 		# Setup search query
-		print(sys.argv[2])
-		venue = sys.argv[2]
+		venue = regex
 		use_regex = 1
 		ignore_case = 1
 		max_lock = 6
 		country = 235
 
-		payload = {"vname": venue, "regex": use_regex, "ignorecase": ignore_case, "lock": max_lock, "country": country, "submit": "Search"}
+		payload = {"vname": venue, "regex": use_regex, "ignorecase": ignore_case,
+		"lock": max_lock, "country": country, "submit": "Search"}
 		scrape = requests.post("https://db.slickbox.net/venues.php", data = payload)
 
 		# ------------------------------------- Parse the HTML Output -------------------------------------- #
 
 		# Find where the relevant data begins and ends in the HTML output
-		data = scrape.text[scrape.text.find('<tr id="link"'):scrape.text.rfind('</table>')]
+		data = scrape.text[scrape.text.find('</thead>'):scrape.text.rfind('</table>')]
 
-		# Fill empty fields with text to prevent BS from erasing them, then initialize BS
-		data = data.replace("<td></td>", "<td>(NULL)</td>")
-		soup = BeautifulSoup(data, "html.parser")
-
-		# Extract the permalinks and add them as the next element after the venue name
-		for i in soup.find_all("a"):
-			i.insert(1, i.get("href"))
-
-		# Keep only the readable text and arbitrarily use an uncommon delimiter
-		soup = soup.get_text('__')
-
-		# Clean up the output
-		soup = soup.replace('__ ', '__')	# Remove extra spaces
-		soup = soup.replace("(NULL)", "")	# Remove the random text added earlier
-
-		# Split on the field delimiter
-		split = re.split('__', soup)
-
-		# Generate a 2D list of from the fields
+		# Create a 2D list to store the parsed database
 		place = []
-		count = -1		# Start at -1 because it will auto-increment to 0 with the first iteration
-		for i in range(len(split)):
-			if i % 15 == 0:			# A new venue entry begins every 15 fields
-				place.append([])
-				count+= 1
-			place[count].append(split[i])
+		place.append([])
+		row = -1		# Start at -1 because it will auto-increment to 0 with the first iteration
+		col = 0
+		index = 0
+
+		# Parse through the data as follows:
+		# 1. Find each instance of <td> and note the index in the string
+		# 2. Starting at that position, look for the first instance of </td>
+		# 3. Store the string value between the two found index positions
+		# 4. Every 15 found fields, begin a new row denoting a new Place entry
+		while index < len(data):
+			try:
+				start = data.find("<td>", index)
+				if col == 15:			# A new venue entry begins every 15 fields
+					place.append([])
+					row+= 1
+					col = 0
+				end = data.index("</td>", start)
+				place[row].append(data[start+4:end])
+				index = end
+			except ValueError:
+				return ""
 
 		# ------------------------------------- Export to the Database ------------------------------------- #
 
@@ -92,4 +87,4 @@ class Command(BaseCommand):
 
 	def handle(self, *args, **options):
 		regex = options['regex']
-		self.scrape()
+		self.scrape(regex)

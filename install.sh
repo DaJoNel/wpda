@@ -21,7 +21,7 @@ autoconf apache2 mysql-server libapache2-mod-wsgi libmysqlclient-dev
 # Update pip and install pip dependencies
 sudo -H pip install --upgrade pip
 sudo -H pip install django djangorestframework djangorestframework-jsonapi \
-markdown django-filter mysqlclient beautifulsoup4 requests iso8601
+markdown django-filter mysqlclient requests iso8601
 
 # Update npm list and install dependencies
 sudo npm install -g npm bower phantomjs-prebuilt ember-cli@2.8
