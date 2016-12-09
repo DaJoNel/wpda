@@ -22,10 +22,17 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '7tguu38%n=7lp0-kjnfm9yd&h8bdl1&639uo)6pjet##!k8r3q'
 
+# These security functions are handled by Apache
+SILENCED_SYSTEM_CHECKS = ["security.W004", "security.W006", "security.W008", "security.W019"]
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
 ALLOWED_HOSTS = []
+
+SECURE_BROWSER_XSS_FILTER = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = True
 
 
 # Application definition
