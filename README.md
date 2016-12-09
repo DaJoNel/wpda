@@ -15,12 +15,15 @@ NOTE: The WPDA automatic installer requires Ubuntu 16.04.1 LTS.
 4. Run the installation script.  
     *(You will be prompted for administrator credentials.)*  
     `./install.sh`
+    
+## Build Instructions
 
-5. Build the WPDA Client application.  
-    `cd /var/www/wpda-client/`  
-    `ember build -o /var/www/wpda-server/static/ember/`  
-    *Or, if using Watchman to watch the directory for changes and automatically build.*  
-    `ember build --watch -o /var/www/wpda-server/static/ember/`
+These instructions are to build the WPDA client application. NOTE: The initial build is performed during installation.
+
+`cd /var/www/wpda-client/`  
+`ember build -o /var/www/wpda-server/static/ember/`  
+*Or, if using Watchman to watch the directory for changes and automatically build.*  
+`ember build --watch -o /var/www/wpda-server/static/ember/`
 
 ## Usage Instructions
 
