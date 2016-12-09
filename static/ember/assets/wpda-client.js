@@ -6,8 +6,8 @@
 
 /* jshint ignore:end */
 
-define('wpda-client/adapters/application', ['exports', 'ember-data', 'ember-simple-auth/mixins/data-adapter-mixin'], function (exports, _emberData, _emberSimpleAuthMixinsDataAdapterMixin) {
-	exports['default'] = _emberData['default'].JSONAPIAdapter.extend(_emberSimpleAuthMixinsDataAdapterMixin['default'], {
+define('wpda-client/adapters/application', ['exports', 'ember-data'], function (exports, _emberData) {
+	exports['default'] = _emberData['default'].JSONAPIAdapter.extend({
 		namespace: 'api',
 		authorizer: 'authorizer:application',
 
@@ -33,11 +33,17 @@ define('wpda-client/app', ['exports', 'ember', 'wpda-client/resolver', 'ember-lo
 
 	exports['default'] = App;
 });
-define('wpda-client/authenticators/oauth2', ['exports', 'ember-simple-auth/authenticators/oauth2-password-grant'], function (exports, _emberSimpleAuthAuthenticatorsOauth2PasswordGrant) {
-  exports['default'] = _emberSimpleAuthAuthenticatorsOauth2PasswordGrant['default'].extend();
-});
-define('wpda-client/authorizers/application', ['exports', 'ember-simple-auth/authorizers/oauth2-bearer'], function (exports, _emberSimpleAuthAuthorizersOauth2Bearer) {
-  exports['default'] = _emberSimpleAuthAuthorizersOauth2Bearer['default'].extend();
+define("wpda-client/authenticators/oauth2", ["exports"], function (exports) {});
+define("wpda-client/authorizers/application", ["exports"], function (exports) {});
+define('wpda-client/components/app-version', ['exports', 'ember-cli-app-version/components/app-version', 'wpda-client/config/environment'], function (exports, _emberCliAppVersionComponentsAppVersion, _wpdaClientConfigEnvironment) {
+
+  var name = _wpdaClientConfigEnvironment['default'].APP.name;
+  var version = _wpdaClientConfigEnvironment['default'].APP.version;
+
+  exports['default'] = _emberCliAppVersionComponentsAppVersion['default'].extend({
+    version: version,
+    name: name
+  });
 });
 define('wpda-client/components/auth-manager', ['exports', 'ember'], function (exports, _ember) {
 	exports['default'] = _ember['default'].Component.extend({
@@ -343,16 +349,6 @@ define('wpda-client/components/place-list', ['exports', 'ember'], function (expo
         authManager: _ember['default'].inject.service('session')
     });
 });
-define('wpda-client/helpers/app-version', ['exports', 'ember', 'wpda-client/config/environment'], function (exports, _ember, _wpdaClientConfigEnvironment) {
-  exports.appVersion = appVersion;
-  var version = _wpdaClientConfigEnvironment['default'].APP.version;
-
-  function appVersion() {
-    return version;
-  }
-
-  exports['default'] = _ember['default'].Helper.helper(appVersion);
-});
 define('wpda-client/helpers/bs-contains', ['exports', 'ember-bootstrap/helpers/bs-contains'], function (exports, _emberBootstrapHelpersBsContains) {
   Object.defineProperty(exports, 'default', {
     enumerable: true,
@@ -416,12 +412,9 @@ define('wpda-client/helpers/singularize', ['exports', 'ember-inflector/lib/helpe
   exports['default'] = _emberInflectorLibHelpersSingularize['default'];
 });
 define('wpda-client/initializers/app-version', ['exports', 'ember-cli-app-version/initializer-factory', 'wpda-client/config/environment'], function (exports, _emberCliAppVersionInitializerFactory, _wpdaClientConfigEnvironment) {
-  var _config$APP = _wpdaClientConfigEnvironment['default'].APP;
-  var name = _config$APP.name;
-  var version = _config$APP.version;
   exports['default'] = {
     name: 'App Version',
-    initialize: (0, _emberCliAppVersionInitializerFactory['default'])(name, version)
+    initialize: (0, _emberCliAppVersionInitializerFactory['default'])(_wpdaClientConfigEnvironment['default'].APP.name, _wpdaClientConfigEnvironment['default'].APP.version)
   };
 });
 define('wpda-client/initializers/bootstrap-linkto', ['exports', 'ember-bootstrap/initializers/bootstrap-linkto'], function (exports, _emberBootstrapInitializersBootstrapLinkto) {
@@ -502,19 +495,6 @@ define('wpda-client/initializers/ember-data', ['exports', 'ember-data/setup-cont
   exports['default'] = {
     name: 'ember-data',
     initialize: _emberDataSetupContainer['default']
-  };
-});
-define('wpda-client/initializers/ember-simple-auth', ['exports', 'ember', 'wpda-client/config/environment', 'ember-simple-auth/configuration', 'ember-simple-auth/initializers/setup-session', 'ember-simple-auth/initializers/setup-session-service'], function (exports, _ember, _wpdaClientConfigEnvironment, _emberSimpleAuthConfiguration, _emberSimpleAuthInitializersSetupSession, _emberSimpleAuthInitializersSetupSessionService) {
-  exports['default'] = {
-    name: 'ember-simple-auth',
-    initialize: function initialize(registry) {
-      var config = _wpdaClientConfigEnvironment['default']['ember-simple-auth'] || {};
-      config.baseURL = _wpdaClientConfigEnvironment['default'].baseURL;
-      _emberSimpleAuthConfiguration['default'].load(config);
-
-      (0, _emberSimpleAuthInitializersSetupSession['default'])(registry);
-      (0, _emberSimpleAuthInitializersSetupSessionService['default'])(registry);
-    }
   };
 });
 define('wpda-client/initializers/export-application-global', ['exports', 'ember', 'wpda-client/config/environment'], function (exports, _ember, _wpdaClientConfigEnvironment) {
@@ -629,14 +609,6 @@ define("wpda-client/instance-initializers/ember-data", ["exports", "ember-data/-
     initialize: _emberDataPrivateInstanceInitializersInitializeStoreService["default"]
   };
 });
-define('wpda-client/instance-initializers/ember-simple-auth', ['exports', 'ember-simple-auth/instance-initializers/setup-session-restoration'], function (exports, _emberSimpleAuthInstanceInitializersSetupSessionRestoration) {
-  exports['default'] = {
-    name: 'ember-simple-auth',
-    initialize: function initialize(instance) {
-      (0, _emberSimpleAuthInstanceInitializersSetupSessionRestoration['default'])(instance);
-    }
-  };
-});
 define('wpda-client/models/place', ['exports', 'ember-data'], function (exports, _emberData) {
 	exports['default'] = _emberData['default'].Model.extend({
 		isVerified: _emberData['default'].attr('boolean'),
@@ -674,15 +646,15 @@ define('wpda-client/router', ['exports', 'ember', 'wpda-client/config/environmen
 
     exports['default'] = Router;
 });
-define('wpda-client/routes/application', ['exports', 'ember', 'ember-simple-auth/mixins/application-route-mixin'], function (exports, _ember, _emberSimpleAuthMixinsApplicationRouteMixin) {
-	exports['default'] = _ember['default'].Route.extend(_emberSimpleAuthMixinsApplicationRouteMixin['default'], {
+define('wpda-client/routes/application', ['exports', 'ember'], function (exports, _ember) {
+	exports['default'] = _ember['default'].Route.extend({
 		model: function model() {
 			return this.store.findAll('place');
 		}
 	});
 });
-define('wpda-client/routes/profile', ['exports', 'ember', 'ember-simple-auth/mixins/authenticated-route-mixin'], function (exports, _ember, _emberSimpleAuthMixinsAuthenticatedRouteMixin) {
-  exports['default'] = _ember['default'].Route.extend(_emberSimpleAuthMixinsAuthenticatedRouteMixin['default']);
+define('wpda-client/routes/profile', ['exports', 'ember'], function (exports, _ember) {
+  exports['default'] = _ember['default'].Route.extend();
 });
 define('wpda-client/serializers/application', ['exports', 'ember-data'], function (exports, _emberData) {
     exports['default'] = _emberData['default'].JSONAPISerializer.extend({
@@ -699,12 +671,6 @@ define('wpda-client/services/ajax', ['exports', 'ember-ajax/services/ajax'], fun
       return _emberAjaxServicesAjax['default'];
     }
   });
-});
-define('wpda-client/services/session', ['exports', 'ember-simple-auth/services/session'], function (exports, _emberSimpleAuthServicesSession) {
-  exports['default'] = _emberSimpleAuthServicesSession['default'];
-});
-define('wpda-client/session-stores/application', ['exports', 'ember-simple-auth/session-stores/adaptive'], function (exports, _emberSimpleAuthSessionStoresAdaptive) {
-  exports['default'] = _emberSimpleAuthSessionStoresAdaptive['default'].extend();
 });
 define("wpda-client/templates/application", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template((function () {
@@ -5046,6 +5012,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             dom.appendChild(el1, el2);
             var el2 = dom.createElement("td");
             var el3 = dom.createElement("a");
+            dom.setAttribute(el3, "target", "_wme_venues");
             var el4 = dom.createComment("");
             dom.appendChild(el3, el4);
             dom.appendChild(el2, el3);
@@ -5142,7 +5109,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             morphs[14] = dom.createMorphAt(element0, 22, 22);
             return morphs;
           },
-          statements: [["block", "if", [["get", "place.isVerified", ["loc", [null, [24, 18], [24, 34]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [24, 12], [28, 19]]]], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [29, 27], [29, 42]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [29, 46], [29, 60]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [30, 16], [30, 32]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [31, 16], [31, 32]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [32, 16], [32, 30]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [33, 16], [33, 31]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [34, 16], [34, 36]]], 0, 0, 0, 0], ["content", "place.createdBy", ["loc", [null, [35, 16], [35, 35]]], 0, 0, 0, 0], ["content", "place.createdOn", ["loc", [null, [35, 39], [35, 58]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [36, 16], [36, 35]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [36, 39], [36, 58]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [37, 16], [37, 35]]], 0, 0, 0, 0], ["block", "if", [["get", "place.updateRequest", ["loc", [null, [38, 18], [38, 37]]], 0, 0, 0, 0]], [], 2, 3, ["loc", [null, [38, 12], [42, 19]]]], ["block", "if", [["get", "place.isResidential", ["loc", [null, [43, 18], [43, 37]]], 0, 0, 0, 0]], [], 4, 5, ["loc", [null, [43, 12], [47, 19]]]]],
+          statements: [["block", "if", [["get", "place.isVerified", ["loc", [null, [24, 18], [24, 34]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [24, 12], [28, 19]]]], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [29, 27], [29, 42]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [29, 67], [29, 81]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [30, 16], [30, 32]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [31, 16], [31, 32]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [32, 16], [32, 30]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [33, 16], [33, 31]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [34, 16], [34, 36]]], 0, 0, 0, 0], ["content", "place.createdBy", ["loc", [null, [35, 16], [35, 35]]], 0, 0, 0, 0], ["content", "place.createdOn", ["loc", [null, [35, 39], [35, 58]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [36, 16], [36, 35]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [36, 39], [36, 58]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [37, 16], [37, 35]]], 0, 0, 0, 0], ["block", "if", [["get", "place.updateRequest", ["loc", [null, [38, 18], [38, 37]]], 0, 0, 0, 0]], [], 2, 3, ["loc", [null, [38, 12], [42, 19]]]], ["block", "if", [["get", "place.isResidential", ["loc", [null, [43, 18], [43, 37]]], 0, 0, 0, 0]], [], 4, 5, ["loc", [null, [43, 12], [47, 19]]]]],
           locals: ["place"],
           templates: [child0, child1, child2, child3, child4, child5]
         };
@@ -5450,7 +5417,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+42b581a5"});
+  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+f0736229"});
 }
 
 /* jshint ignore:end */
