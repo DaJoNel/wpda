@@ -60,11 +60,12 @@ sudo a2ensite django
 sudo a2dissite 000-default
 sudo service apache2 restart
 
-# Install Ember dependencies
+# Install Ember dependencies and build the client application
 cd /var/www/wpda-client/
 bower install
 ember install ember-bootstrap
-npm install
+sudo npm install
+ember build -o /var/www/wpda-server/static/ember/
 
 # Make model migrations for Django
 cd /var/www/wpda-server/
