@@ -1,12 +1,22 @@
 from __future__ import unicode_literals
 from django.db import models
+from django.core.validators import *
+from django.contrib.auth.models import *
+from django.contrib import admin
 
 class Profile(models.Model):
-	#user_id = models.ForeignKey(User)
-	wazeId = models.CharField(max_length=63, unique=True)
+	user = models.OneToOneField(User, on_delete=models.CASCADE)
+	wazeName = models.CharField(max_length=255)
+	wazeLevel = models.PositiveSmallIntegerField(default=1)
 
 	def __str__(self):
 		return self.user.username
+
+	class Admin(admin.ModelAdmin):
+		list_display = ('user',)
+
+	class JSONAPIMeta:
+		resource_name = "profiles"
 
 class Place(models.Model):
 	isVerified = models.BooleanField(default=False)
@@ -29,3 +39,6 @@ class Place(models.Model):
 
 	def __str__(self):
 		return ' '.join([self.venue_id, self.name])
+
+	class JSONAPIMeta:
+		resource_name = "places"

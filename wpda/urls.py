@@ -15,23 +15,11 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
-
-from rest_framework import routers
-from rest_framework.authtoken.views import obtain_auth_token
 from api import views
-from api.views import *
-
-router = routers.DefaultRouter()
-router.register("profiles", ProfileViewSet)
-router.register("places", PlaceViewSet)
 
 urlpatterns = [
-	url(r'^api-auth-token/', obtain_auth_token),
 	url(r'^admin/', admin.site.urls),
-
-	# API
-	url(r'^api/', include(router.urls)),
-	#url(r'^places/?id=<venue_id>[^/]+)?', views.places, name='places'),
+	url(r'^api/', include('api.urls')),
 
 	# Frontend Ember app
 	url(r'^', views.frontend, name='frontend')

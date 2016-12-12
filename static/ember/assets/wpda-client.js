@@ -5417,7 +5417,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+f0736229"});
+  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+4c4b395f"});
 }
 
 /* jshint ignore:end */
