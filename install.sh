@@ -63,7 +63,6 @@ sudo service apache2 restart
 # Install Ember dependencies and build the client application
 cd /var/www/wpda-client/
 bower install
-ember install ember-bootstrap
 sudo npm install
 ember build -o /var/www/wpda-server/static/ember/
 
