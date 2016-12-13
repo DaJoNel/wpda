@@ -64197,34 +64197,6 @@ requireModule("ember");
   generateModule('rsvp', { 'default': Ember.RSVP });
 })();
 
-;/* globals define */
-define('ember/load-initializers', ['exports', 'ember-load-initializers', 'ember'], function(exports, loadInitializers, Ember) {
-  Ember['default'].deprecate(
-    'Usage of `' + 'ember/load-initializers' + '` module is deprecated, please update to `ember-load-initializers`.',
-    false,
-    { id: 'ember-load-initializers.legacy-shims', until: '3.0.0' }
-  );
-
-  exports['default'] = loadInitializers['default'];
-});
-
-;/* globals define */
-
-function createDeprecatedModule(moduleId) {
-  define(moduleId, ['exports', 'ember-resolver/resolver', 'ember'], function(exports, Resolver, Ember) {
-    Ember['default'].deprecate(
-      'Usage of `' + moduleId + '` module is deprecated, please update to `ember-resolver`.',
-      false,
-      { id: 'ember-resolver.legacy-shims', until: '3.0.0' }
-    );
-
-    exports['default'] = Resolver['default'];
-  });
-}
-
-createDeprecatedModule('ember/resolver');
-createDeprecatedModule('resolver');
-
 ;/**
  * Patched to replace setTimeout with Ember.run.later
  */
@@ -64288,6 +64260,34 @@ createDeprecatedModule('resolver');
   })
 
 }(jQuery);
+;/* globals define */
+define('ember/load-initializers', ['exports', 'ember-load-initializers', 'ember'], function(exports, loadInitializers, Ember) {
+  Ember['default'].deprecate(
+    'Usage of `' + 'ember/load-initializers' + '` module is deprecated, please update to `ember-load-initializers`.',
+    false,
+    { id: 'ember-load-initializers.legacy-shims', until: '3.0.0' }
+  );
+
+  exports['default'] = loadInitializers['default'];
+});
+
+;/* globals define */
+
+function createDeprecatedModule(moduleId) {
+  define(moduleId, ['exports', 'ember-resolver/resolver', 'ember'], function(exports, Resolver, Ember) {
+    Ember['default'].deprecate(
+      'Usage of `' + moduleId + '` module is deprecated, please update to `ember-resolver`.',
+      false,
+      { id: 'ember-resolver.legacy-shims', until: '3.0.0' }
+    );
+
+    exports['default'] = Resolver['default'];
+  });
+}
+
+createDeprecatedModule('ember/resolver');
+createDeprecatedModule('resolver');
+
 ;define('ember-ajax/ajax-request', ['exports', 'ember', 'ember-ajax/mixins/ajax-request'], function (exports, _ember, _emberAjaxMixinsAjaxRequest) {
   'use strict';
 
@@ -65957,7 +65957,7 @@ define('ember-bootstrap/components/bs-button-group', ['exports', 'ember', 'ember
             } else {
               var lastActive = this.get('lastActiveChildren.firstObject');
               if (lastActive) {
-                lastActive.set('active', true);
+                lastActive.set('active', this.get('value') ? true : false);
               }
             }
             break;
@@ -66088,7 +66088,7 @@ define('ember-bootstrap/components/bs-button', ['exports', 'ember', 'ember-boots
      */
     classTypePrefix: 'btn',
 
-    attributeBindings: ['disabled', 'buttonType:type'],
+    attributeBindings: ['disabled', 'buttonType:type', 'title'],
 
     /**
      * Default label of the button. Not need if used as a block component
@@ -66215,6 +66215,15 @@ define('ember-bootstrap/components/bs-button', ['exports', 'ember', 'ember-boots
      * @public
      */
     reset: null,
+
+    /**
+     * The HTML title attribute
+     *
+     * @property title
+     * @type string
+     * @public
+     */
+    title: null,
 
     /**
      * This will reset the state property to 'default', and with that the button's label to defaultText
@@ -69047,14 +69056,6 @@ define('ember-bootstrap/components/bs-modal', ['exports', 'ember'], function (ex
   Modal.TRANSITION_DURATION = 300;
   Modal.BACKDROP_TRANSITION_DURATION = 150;
 
-  var observeOpen = function observeOpen() {
-    if (this.get('open')) {
-      this.show();
-    } else {
-      this.hide();
-    }
-  };
-
   /**
   
    Component for creating [Bootstrap modals](http://getbootstrap.com/javascript/#modals). Creating a simple modal is easy:
@@ -69231,7 +69232,7 @@ define('ember-bootstrap/components/bs-modal', ['exports', 'ember'], function (ex
      * @default false
      * @private
      */
-    'in': computed.and('open', 'notFade'),
+    'in': false,
 
     /**
      * Use a semi-transparent modal background to hide the rest of the page.
@@ -69249,7 +69250,7 @@ define('ember-bootstrap/components/bs-modal', ['exports', 'ember'], function (ex
      * @default false
      * @private
      */
-    showBackdrop: computed.and('open', 'backdrop'),
+    showBackdrop: false,
 
     /**
      * Closes the modal when escape key is pressed.
@@ -69489,8 +69490,6 @@ define('ember-bootstrap/components/bs-modal', ['exports', 'ember'], function (ex
       }
     },
 
-    _observeOpen: observer('open', observeOpen),
-
     /**
      * Give the modal (or its autofocus element) focus
      *
@@ -69727,17 +69726,39 @@ define('ember-bootstrap/components/bs-modal', ['exports', 'ember'], function (ex
     }),
 
     didInsertElement: function didInsertElement() {
+      this._super.apply(this, arguments);
       if (this.get('open')) {
         this.show();
       }
     },
 
     willDestroyElement: function willDestroyElement() {
+      this._super.apply(this, arguments);
       _ember['default'].$(window).off('resize.bs.modal');
       _ember['default'].$('body').removeClass('modal-open');
       this.resetScrollbar();
-    }
+    },
 
+    _observeOpen: observer('open', function () {
+      if (this.get('open')) {
+        this.show();
+      } else {
+        this.hide();
+      }
+    }),
+
+    init: function init() {
+      this._super.apply(this, arguments);
+
+      var _getProperties = this.getProperties('open', 'backdrop', 'fade');
+
+      var open = _getProperties.open;
+      var backdrop = _getProperties.backdrop;
+      var fade = _getProperties.fade;
+
+      this.set('in', open && !fade);
+      this.set('showBackdrop', open && backdrop);
+    }
   });
 });
 define('ember-bootstrap/components/bs-nav-item', ['exports', 'ember', 'ember-bootstrap/templates/components/bs-nav-item', 'ember-bootstrap/mixins/component-parent'], function (exports, _ember, _emberBootstrapTemplatesComponentsBsNavItem, _emberBootstrapMixinsComponentParent) {
@@ -72003,7 +72024,7 @@ define("ember-bootstrap/templates/components/bs-popover", ["exports"], function 
             morphs[0] = dom.createMorphAt(fragment, 1, 1, contextualElement);
             return morphs;
           },
-          statements: [["block", "bs-popover-element", [], ["id", ["subexpr", "@mut", [["get", "overlayId", ["loc", [null, [5, 33], [5, 42]]], 0, 0, 0, 0]], [], [], 0, 0], "placement", ["subexpr", "@mut", [["get", "_placement", ["loc", [null, [5, 53], [5, 63]]], 0, 0, 0, 0]], [], [], 0, 0], "fade", ["subexpr", "@mut", [["get", "fade", ["loc", [null, [5, 69], [5, 73]]], 0, 0, 0, 0]], [], [], 0, 0], "in", ["subexpr", "@mut", [["get", "in", ["loc", [null, [5, 77], [5, 79]]], 0, 0, 0, 0]], [], [], 0, 0], "title", ["subexpr", "@mut", [["get", "title", ["loc", [null, [5, 86], [5, 91]]], 0, 0, 0, 0]], [], [], 0, 0]], 0, null, ["loc", [null, [5, 8], [11, 31]]]]],
+          statements: [["block", "bs-popover-element", [], ["id", ["subexpr", "@mut", [["get", "overlayId", ["loc", [null, [5, 33], [5, 42]]], 0, 0, 0, 0]], [], [], 0, 0], "placement", ["subexpr", "@mut", [["get", "_placement", ["loc", [null, [5, 53], [5, 63]]], 0, 0, 0, 0]], [], [], 0, 0], "fade", ["subexpr", "@mut", [["get", "fade", ["loc", [null, [5, 69], [5, 73]]], 0, 0, 0, 0]], [], [], 0, 0], "in", ["subexpr", "@mut", [["get", "in", ["loc", [null, [5, 77], [5, 79]]], 0, 0, 0, 0]], [], [], 0, 0], "title", ["subexpr", "@mut", [["get", "title", ["loc", [null, [5, 86], [5, 91]]], 0, 0, 0, 0]], [], [], 0, 0], "class", ["subexpr", "@mut", [["get", "class", ["loc", [null, [5, 98], [5, 103]]], 0, 0, 0, 0]], [], [], 0, 0]], 0, null, ["loc", [null, [5, 8], [11, 31]]]]],
           locals: [],
           templates: [child0]
         };
@@ -72861,7 +72882,7 @@ define("ember-bootstrap/templates/components/bs-tooltip", ["exports"], function 
             morphs[0] = dom.createMorphAt(fragment, 1, 1, contextualElement);
             return morphs;
           },
-          statements: [["block", "bs-tooltip-element", [], ["id", ["subexpr", "@mut", [["get", "overlayId", ["loc", [null, [5, 33], [5, 42]]], 0, 0, 0, 0]], [], [], 0, 0], "placement", ["subexpr", "@mut", [["get", "_placement", ["loc", [null, [5, 53], [5, 63]]], 0, 0, 0, 0]], [], [], 0, 0], "fade", ["subexpr", "@mut", [["get", "fade", ["loc", [null, [5, 69], [5, 73]]], 0, 0, 0, 0]], [], [], 0, 0], "in", ["subexpr", "@mut", [["get", "in", ["loc", [null, [5, 77], [5, 79]]], 0, 0, 0, 0]], [], [], 0, 0]], 0, null, ["loc", [null, [5, 8], [11, 31]]]]],
+          statements: [["block", "bs-tooltip-element", [], ["id", ["subexpr", "@mut", [["get", "overlayId", ["loc", [null, [5, 33], [5, 42]]], 0, 0, 0, 0]], [], [], 0, 0], "placement", ["subexpr", "@mut", [["get", "_placement", ["loc", [null, [5, 53], [5, 63]]], 0, 0, 0, 0]], [], [], 0, 0], "fade", ["subexpr", "@mut", [["get", "fade", ["loc", [null, [5, 69], [5, 73]]], 0, 0, 0, 0]], [], [], 0, 0], "in", ["subexpr", "@mut", [["get", "in", ["loc", [null, [5, 77], [5, 79]]], 0, 0, 0, 0]], [], [], 0, 0], "class", ["subexpr", "@mut", [["get", "class", ["loc", [null, [5, 86], [5, 91]]], 0, 0, 0, 0]], [], [], 0, 0]], 0, null, ["loc", [null, [5, 8], [11, 31]]]]],
           locals: [],
           templates: [child0]
         };
@@ -72916,8 +72937,8 @@ define("ember-bootstrap/templates/components/bs-tooltip", ["exports"], function 
             "column": 0
           },
           "end": {
-            "line": 15,
-            "column": 7
+            "line": 16,
+            "column": 0
           }
         },
         "moduleName": "modules/ember-bootstrap/templates/components/bs-tooltip.hbs"
@@ -73088,6 +73109,922 @@ define("ember-cli-app-version/templates/app-version", ["exports"], function (exp
       templates: []
     };
   })());
+});
+define('ember-cli-pagination/computed/paged-array', ['exports', 'ember', 'ember-cli-pagination/local/paged-array', 'ember-cli-pagination/infinite/paged-infinite-array'], function (exports, _ember, _emberCliPaginationLocalPagedArray, _emberCliPaginationInfinitePagedInfiniteArray) {
+  'use strict';
+
+  function makeLocal(contentProperty, ops) {
+    return _ember['default'].computed("", function () {
+      var pagedOps = {}; //{content: this.get(contentProperty)};
+      pagedOps.parent = this;
+
+      var getVal = function getVal(key, val) {
+        if (key.match(/Binding$/)) {
+          return "parent." + val;
+          //return Ember.Binding.oneWay("parent."+val);
+        } else {
+            return val;
+          }
+      };
+
+      for (var key in ops) {
+        pagedOps[key] = getVal(key, ops[key]);
+      }
+
+      var paged = _emberCliPaginationLocalPagedArray['default'].extend({
+        contentBinding: "parent." + contentProperty
+      }).create(pagedOps);
+      // paged.lockToRange();
+      return paged;
+    });
+  }
+
+  function makeInfiniteWithPagedSource(contentProperty /*, ops */) {
+    return _ember['default'].computed(function () {
+      return _emberCliPaginationInfinitePagedInfiniteArray['default'].create({ all: this.get(contentProperty) });
+    });
+  }
+
+  function makeInfiniteWithUnpagedSource(contentProperty, ops) {
+    return _ember['default'].computed(function () {
+      var all = this.get(contentProperty);
+      if (all) {
+        all = _ember['default'].A(all);
+      }
+      ops.all = all;
+      return _emberCliPaginationInfinitePagedInfiniteArray['default'].createFromUnpaged(ops);
+    });
+  }
+
+  exports['default'] = function (contentProperty, ops) {
+    ops = ops || {};
+
+    if (ops.infinite === true) {
+      return makeInfiniteWithPagedSource(contentProperty, ops);
+    } else if (ops.infinite) {
+      return makeInfiniteWithUnpagedSource(contentProperty, ops);
+    } else {
+      return makeLocal(contentProperty, ops);
+    }
+  };
+});
+define('ember-cli-pagination/divide-into-pages', ['exports', 'ember'], function (exports, _ember) {
+  'use strict';
+
+  exports['default'] = _ember['default'].Object.extend({
+    objsForPage: function objsForPage(page) {
+      var range = this.range(page);
+      var all = _ember['default'].A(this.get('all'));
+      return _ember['default'].A(all.slice(range.start, range.end + 1));
+    },
+
+    totalPages: function totalPages() {
+      var allLength = parseInt(this.get('all.length'));
+      var perPage = parseInt(this.get('perPage'));
+      return Math.ceil(allLength / perPage);
+    },
+
+    range: function range(page) {
+      var perPage = parseInt(this.get('perPage'));
+      var s = (parseInt(page) - 1) * perPage;
+      var e = s + perPage - 1;
+
+      return { start: s, end: e };
+    }
+  });
+});
+define('ember-cli-pagination/factory', ['exports', 'ember', 'ember-cli-pagination/remote/controller-mixin', 'ember-cli-pagination/local/controller-local-mixin', 'ember-cli-pagination/remote/route-mixin', 'ember-cli-pagination/local/route-local-mixin'], function (exports, _ember, _emberCliPaginationRemoteControllerMixin, _emberCliPaginationLocalControllerLocalMixin, _emberCliPaginationRemoteRouteMixin, _emberCliPaginationLocalRouteLocalMixin) {
+  'use strict';
+
+  var Factory = _ember['default'].Object.extend({
+    paginationTypeInner: function paginationTypeInner() {
+      var res = this.get('config').paginationType;
+      if (res) {
+        return res;
+      }
+      var ops = this.get('config').pagination;
+      if (ops) {
+        return ops.type;
+      }
+      return null;
+    },
+
+    paginationType: function paginationType() {
+      var res = this.paginationTypeInner();
+      if (!(res === "local" || res === "remote")) {
+        throw "unknown pagination type";
+      }
+      return res;
+    },
+
+    controllerMixin: function controllerMixin() {
+      return ({
+        local: _emberCliPaginationLocalControllerLocalMixin['default'],
+        remote: _emberCliPaginationRemoteControllerMixin['default']
+      })[this.paginationType()];
+    },
+
+    routeMixin: function routeMixin() {
+      return ({
+        local: _emberCliPaginationLocalRouteLocalMixin['default'],
+        remote: _emberCliPaginationRemoteRouteMixin['default']
+      })[this.paginationType()];
+    }
+  });
+
+  Factory.reopenClass({
+    controllerMixin: function controllerMixin(config) {
+      return Factory.create({ config: config }).controllerMixin();
+    },
+    routeMixin: function routeMixin(config) {
+      return Factory.create({ config: config }).routeMixin();
+    }
+  });
+
+  exports['default'] = Factory;
+});
+define('ember-cli-pagination/infinite/paged-infinite-array', ['exports', 'ember', 'ember-cli-pagination/local/paged-array'], function (exports, _ember, _emberCliPaginationLocalPagedArray) {
+  'use strict';
+
+  // import PagedRemoteArray from 'ember-cli-pagination/remote/paged-remote-array';
+
+  var toArray = function toArray(a) {
+    var res = [];
+    if (a.forEach) {
+      a.forEach(function (obj) {
+        res.push(obj);
+      });
+    } else {
+      res = a;
+    }
+    return res;
+  };
+
+  var pushPromiseObjects = function pushPromiseObjects(base, promise) {
+    if (!base) {
+      throw "pushPromiseObjects no base";
+    }
+    if (!promise) {
+      throw "pushPromiseObjects no promise";
+    }
+
+    if (!promise.then) {
+      throw "pushPromiseObjects no promise.then";
+    }
+
+    if (!base.pushObjects) {
+      throw "pushPromiseObjects no base.pushObjects";
+    }
+
+    promise.then(function (r) {
+      base.pushObjects(toArray(r));
+    });
+    return promise;
+  };
+
+  var InfiniteBase = _ember['default'].ArrayProxy.extend({
+    page: 1,
+
+    arrangedContent: _ember['default'].computed('content.[]', function () {
+      return this.get('content');
+    }),
+
+    init: function init() {
+      this.set('content', _ember['default'].A([]));
+      this.addRecordsForPage(1);
+    },
+
+    loadNextPage: function loadNextPage() {
+      this.incrementProperty('page');
+      var page = this.get('page');
+      return this.addRecordsForPage(page);
+    },
+
+    addRecordsForPage: function addRecordsForPage(page) {
+      var arr = this.getRecordsForPage(page);
+      return pushPromiseObjects(this.get('content'), arr);
+    },
+
+    getRecordsForPage: function getRecordsForPage() /* page */{
+      throw "Not Implemented";
+    }
+  });
+
+  var c = InfiniteBase.extend({
+    getRecordsForPage: function getRecordsForPage(page) {
+      var c = this.get('all');
+      c.set('page', page);
+      return c;
+    },
+
+    then: function then(f, f2) {
+      this.get('all').then(f, f2);
+    }
+  });
+
+  c.reopenClass({
+    createFromUnpaged: function createFromUnpaged(ops) {
+      var unpaged = _ember['default'].A(ops.all);
+      var perPage = ops.perPage || 10;
+      var paged = _emberCliPaginationLocalPagedArray['default'].create({ perPage: perPage, content: unpaged });
+      return this.create({ all: paged });
+    }
+  });
+
+  exports['default'] = c;
+});
+define('ember-cli-pagination/lib/page-items', ['exports', 'ember', 'ember-cli-pagination/util', 'ember-cli-pagination/lib/truncate-pages', 'ember-cli-pagination/util/safe-get'], function (exports, _ember, _emberCliPaginationUtil, _emberCliPaginationLibTruncatePages, _emberCliPaginationUtilSafeGet) {
+  'use strict';
+
+  exports['default'] = _ember['default'].Object.extend(_emberCliPaginationUtilSafeGet['default'], {
+    pageItemsAll: _ember['default'].computed("currentPage", "totalPages", function () {
+      var currentPage = this.getInt("currentPage");
+      var totalPages = this.getInt("totalPages");
+      _emberCliPaginationUtil['default'].log('PageNumbers#pageItems, currentPage ' + currentPage + ', totalPages ' + totalPages);
+
+      var res = _ember['default'].A([]);
+
+      for (var i = 1; i <= totalPages; i++) {
+        res.push({
+          page: i,
+          current: currentPage === i,
+          dots: false
+        });
+      }
+      return res;
+    }),
+    //
+
+    pageItemsTruncated: _ember['default'].computed('currentPage', 'totalPages', 'numPagesToShow', 'showFL', function () {
+      var currentPage = this.getInt('currentPage');
+      var totalPages = this.getInt("totalPages");
+      var toShow = this.getInt('numPagesToShow');
+      var showFL = this.get('showFL');
+
+      var t = _emberCliPaginationLibTruncatePages['default'].create({ currentPage: currentPage, totalPages: totalPages,
+        numPagesToShow: toShow,
+        showFL: showFL });
+      var pages = t.get('pagesToShow');
+      var next = pages[0];
+
+      return pages.map(function (page) {
+        var h = {
+          page: page,
+          current: currentPage === page,
+          dots: next !== page
+        };
+        next = page + 1;
+        return h;
+      });
+    }),
+
+    pageItems: _ember['default'].computed('currentPage', 'totalPages', 'truncatePages', 'numPagesToShow', function () {
+      if (this.get('truncatePages')) {
+        return this.get('pageItemsTruncated');
+      } else {
+        return this.get('pageItemsAll');
+      }
+    })
+  });
+});
+define('ember-cli-pagination/lib/truncate-pages', ['exports', 'ember', 'ember-cli-pagination/util/safe-get'], function (exports, _ember, _emberCliPaginationUtilSafeGet) {
+  'use strict';
+
+  exports['default'] = _ember['default'].Object.extend(_emberCliPaginationUtilSafeGet['default'], {
+    numPagesToShow: 10,
+    showFL: false,
+    currentPage: null,
+    totalPages: null,
+
+    isValidPage: function isValidPage(page) {
+      page = parseInt(page);
+      var totalPages = this.getInt('totalPages');
+
+      return page > 0 && page <= totalPages;
+    },
+
+    pagesToShow: _ember['default'].computed("numPagesToShow", "currentPage", "totalPages", function () {
+      var res = [];
+
+      var numPages = this.getInt('numPagesToShow');
+      var currentPage = this.getInt('currentPage');
+      var totalPages = this.getInt('totalPages');
+      var showFL = this.get('showFL');
+
+      var before = parseInt(numPages / 2);
+      if (currentPage - before < 1) {
+        before = currentPage - 1;
+      }
+      var after = numPages - before - 1;
+      if (totalPages - currentPage < after) {
+        after = totalPages - currentPage;
+        before = numPages - after - 1;
+      }
+
+      // add one page if no first or last is added
+      if (showFL) {
+        if (currentPage - before < 2) {
+          after++;
+        }
+        if (totalPages - currentPage - 1 < after) {
+          before++;
+        }
+      }
+
+      // add each prior page
+      for (var i = before; i > 0; i--) {
+        var possiblePage = currentPage - i;
+        if (this.isValidPage(possiblePage)) {
+          res.push(possiblePage);
+        }
+      }
+
+      res.push(currentPage);
+
+      // add each following page
+      for (i = 1; i <= after; i++) {
+        var possiblePage2 = currentPage + i;
+        if (this.isValidPage(possiblePage2)) {
+          res.push(possiblePage2);
+        }
+      }
+
+      // add first and last page
+      if (showFL) {
+        if (res.length > 0) {
+
+          // add first page if not already there
+          if (res[0] !== 1) {
+            res = [1].concat(res);
+          }
+
+          // add last page if not already there
+          if (res[res.length - 1] !== totalPages) {
+            res.push(totalPages);
+          }
+        }
+      }
+
+      return _ember['default'].A(res);
+    })
+  });
+});
+define('ember-cli-pagination/local/controller-local-mixin', ['exports', 'ember'], function (exports, _ember) {
+  'use strict';
+
+  exports['default'] = _ember['default'].Mixin.create({});
+});
+define('ember-cli-pagination/local/paged-array', ['exports', 'ember', 'ember-cli-pagination/util', 'ember-cli-pagination/divide-into-pages', 'ember-cli-pagination/watch/lock-to-range'], function (exports, _ember, _emberCliPaginationUtil, _emberCliPaginationDivideIntoPages, _emberCliPaginationWatchLockToRange) {
+  'use strict';
+
+  exports['default'] = _ember['default'].ArrayProxy.extend(_ember['default'].Evented, {
+    page: 1,
+    perPage: 10,
+
+    divideObj: function divideObj() {
+      return _emberCliPaginationDivideIntoPages['default'].create({
+        perPage: this.get('perPage'),
+        all: this.get('content')
+      });
+    },
+
+    arrangedContent: _ember['default'].computed("content.[]", "page", "perPage", function () {
+      return this.divideObj().objsForPage(this.get('page'));
+    }),
+
+    totalPages: _ember['default'].computed("content.[]", "perPage", function () {
+      return this.divideObj().totalPages();
+    }),
+
+    setPage: function setPage(page) {
+      _emberCliPaginationUtil['default'].log("setPage " + page);
+      return this.set('page', page);
+    },
+
+    watchPage: _ember['default'].observer('page', 'totalPages', function () {
+      var page = this.get('page');
+      var totalPages = this.get('totalPages');
+
+      this.trigger('pageChanged', page);
+
+      if (page < 1 || page > totalPages) {
+        this.trigger('invalidPage', { page: page, totalPages: totalPages, array: this });
+      }
+    }),
+
+    then: function then(success, failure) {
+      var content = _ember['default'].A(this.get('content'));
+      var me = this;
+
+      if (content.then) {
+        content.then(function () {
+          success(me);
+        }, failure);
+      } else {
+        success(this);
+      }
+    },
+
+    lockToRange: function lockToRange() {
+      _emberCliPaginationWatchLockToRange['default'].watch(this);
+    }
+  });
+});
+define('ember-cli-pagination/local/route-local-mixin', ['exports', 'ember'], function (exports, _ember) {
+  'use strict';
+
+  exports['default'] = _ember['default'].Mixin.create({
+    findPaged: function findPaged(name) {
+      return this.store.find(name);
+    }
+  });
+});
+define('ember-cli-pagination/page-mixin', ['exports', 'ember'], function (exports, _ember) {
+  'use strict';
+
+  exports['default'] = _ember['default'].Mixin.create({
+    getPage: function getPage() {
+      return parseInt(this.get('page') || 1);
+    },
+
+    getPerPage: function getPerPage() {
+      return parseInt(this.get('perPage'));
+    }
+  });
+});
+define("ember-cli-pagination/remote/controller-mixin", ["exports", "ember"], function (exports, _ember) {
+  "use strict";
+
+  exports["default"] = _ember["default"].Mixin.create({
+    queryParams: ["page", "perPage"],
+
+    pageBinding: "content.page",
+
+    totalPagesBinding: "content.totalPages",
+
+    pagedContentBinding: "content"
+  });
+});
+define('ember-cli-pagination/remote/mapping', ['exports', 'ember', 'ember-cli-pagination/validate', 'ember-cli-pagination/util'], function (exports, _ember, _emberCliPaginationValidate, _emberCliPaginationUtil) {
+  'use strict';
+
+  var QueryParamsForBackend = _ember['default'].Object.extend({
+    defaultKeyFor: function defaultKeyFor(key) {
+      if (key === 'perPage') {
+        return 'per_page';
+      }
+      return null;
+    },
+
+    paramKeyFor: function paramKeyFor(key) {
+      return this.getSuppliedParamMapping(key) || this.defaultKeyFor(key) || key;
+    },
+
+    getSuppliedParamMapping: function getSuppliedParamMapping(key) {
+      var h = this.get('paramMapping') || {};
+      return h[key];
+    },
+
+    accumParams: function accumParams(key, accum) {
+      var val = this.get(key);
+      var mappedKey = this.paramKeyFor(key);
+
+      if (Array.isArray(mappedKey)) {
+        this.accumParamsComplex(key, mappedKey, accum);
+      } else {
+        accum[mappedKey] = val;
+      }
+    },
+
+    accumParamsComplex: function accumParamsComplex(key, mapArr, accum) {
+      var mappedKey = mapArr[0];
+      var mapFunc = mapArr[1];
+
+      var val = mapFunc({ page: this.get('page'), perPage: this.get('perPage') });
+      accum[mappedKey] = val;
+    },
+
+    make: function make() {
+      var res = {};
+
+      this.accumParams('page', res);
+      this.accumParams('perPage', res);
+
+      return res;
+    }
+  });
+
+  exports.QueryParamsForBackend = QueryParamsForBackend;
+
+  var ChangeMeta = _ember['default'].Object.extend({
+    getSuppliedParamMapping: function getSuppliedParamMapping(targetVal) {
+      var h = this.get('paramMapping') || {};
+
+      // have to do this gross thing because mapping looks like this:
+      // {total_pages: ['num_pages',function() ...]}
+      //
+      // but the way the code works, we need to check for an entry where val[0] == num_pages
+      // and then return ['total_pages',function() ...]
+      //
+      // Gross, but that's how it's working for now
+      for (var key in h) {
+        var val = h[key];
+        if (targetVal === val) {
+          return key;
+        } else if (Array.isArray(val) && val[0] === targetVal) {
+          return [key, val[1]];
+        }
+      }
+
+      return null;
+    },
+
+    finalKeyFor: function finalKeyFor(key) {
+      return this.getSuppliedParamMapping(key) || key;
+    },
+
+    makeSingleComplex: function makeSingleComplex(key, mapArr, rawVal, accum) {
+      var mappedKey = mapArr[0];
+      var mapFunc = mapArr[1];
+
+      var ops = { rawVal: rawVal, page: this.get('page'), perPage: this.get('perPage') };
+      var mappedVal = mapFunc(ops);
+      accum[mappedKey] = mappedVal;
+    },
+
+    make: function make() {
+      var res = {};
+      var meta = this.get('meta');
+
+      for (var key in meta) {
+        var mappedKey = this.finalKeyFor(key);
+        var val = meta[key];
+
+        if (Array.isArray(mappedKey)) {
+          this.makeSingleComplex(key, mappedKey, val, res);
+        } else {
+          res[mappedKey] = val;
+        }
+      }
+
+      this.validate(res);
+
+      return res;
+    },
+
+    validate: function validate(meta) {
+      if (_emberCliPaginationUtil['default'].isBlank(meta.total_pages)) {
+        _emberCliPaginationValidate['default'].internalError("no total_pages in meta response", meta);
+      }
+    }
+  });
+  exports.ChangeMeta = ChangeMeta;
+});
+define('ember-cli-pagination/remote/paged-remote-array', ['exports', 'ember', 'ember-cli-pagination/util', 'ember-cli-pagination/watch/lock-to-range', 'ember-cli-pagination/remote/mapping', 'ember-cli-pagination/page-mixin'], function (exports, _ember, _emberCliPaginationUtil, _emberCliPaginationWatchLockToRange, _emberCliPaginationRemoteMapping, _emberCliPaginationPageMixin) {
+  'use strict';
+
+  var ArrayProxyPromiseMixin = _ember['default'].Mixin.create(_ember['default'].PromiseProxyMixin, {
+    then: function then(success, failure) {
+      var promise = this.get('promise');
+      var me = this;
+
+      promise.then(function () {
+        success(me);
+      }, failure);
+    }
+  });
+
+  exports['default'] = _ember['default'].ArrayProxy.extend(_emberCliPaginationPageMixin['default'], _ember['default'].Evented, ArrayProxyPromiseMixin, {
+    page: 1,
+    paramMapping: _ember['default'].computed(function () {
+      return {};
+    }),
+
+    init: function init() {
+      var initCallback = this.get('initCallback');
+      if (initCallback) {
+        initCallback(this);
+      }
+
+      try {
+        this.get('promise');
+      } catch (e) {
+        this.set('promise', this.fetchContent());
+      }
+    },
+
+    addParamMapping: function addParamMapping(key, mappedKey, mappingFunc) {
+      var paramMapping = this.get('paramMapping') || {};
+      if (mappingFunc) {
+        paramMapping[key] = [mappedKey, mappingFunc];
+      } else {
+        paramMapping[key] = mappedKey;
+      }
+      this.set('paramMapping', paramMapping);
+      this.incrementProperty('paramsForBackendCounter');
+      //this.pageChanged();
+    },
+
+    addQueryParamMapping: function addQueryParamMapping(key, mappedKey, mappingFunc) {
+      return this.addParamMapping(key, mappedKey, mappingFunc);
+    },
+
+    addMetaResponseMapping: function addMetaResponseMapping(key, mappedKey, mappingFunc) {
+      return this.addParamMapping(key, mappedKey, mappingFunc);
+    },
+
+    paramsForBackend: _ember['default'].computed('page', 'perPage', 'paramMapping', 'paramsForBackendCounter', function () {
+      var paramsObj = _emberCliPaginationRemoteMapping.QueryParamsForBackend.create({ page: this.getPage(),
+        perPage: this.getPerPage(),
+        paramMapping: this.get('paramMapping') });
+      var ops = paramsObj.make();
+
+      // take the otherParams hash and add the values at the same level as page/perPage
+      ops = _emberCliPaginationUtil['default'].mergeHashes(ops, this.get('otherParams') || {});
+
+      return ops;
+    }),
+
+    rawFindFromStore: function rawFindFromStore() {
+      var store = this.get('store');
+      var modelName = this.get('modelName');
+
+      var ops = this.get('paramsForBackend');
+      var res = store.query(modelName, ops);
+
+      return res;
+    },
+
+    fetchContent: function fetchContent() {
+      this.set("loading", true);
+      var res = this.rawFindFromStore();
+      this.incrementProperty("numRemoteCalls");
+      var me = this;
+
+      res.then(function (rows) {
+        var metaObj = _emberCliPaginationRemoteMapping.ChangeMeta.create({ paramMapping: me.get('paramMapping'),
+          meta: rows.meta,
+          page: me.getPage(),
+          perPage: me.getPerPage() });
+
+        me.set("loading", false);
+        return me.set("meta", metaObj.make());
+      }, function (error) {
+        _emberCliPaginationUtil['default'].log("PagedRemoteArray#fetchContent error " + error);
+        me.set("loading", false);
+      });
+
+      return res;
+    },
+
+    totalPagesBinding: "meta.total_pages",
+
+    pageChanged: _ember['default'].observer("page", "perPage", function () {
+      this.set("promise", this.fetchContent());
+    }),
+
+    lockToRange: function lockToRange() {
+      _emberCliPaginationWatchLockToRange['default'].watch(this);
+    },
+
+    watchPage: _ember['default'].observer('page', 'totalPages', function () {
+      var page = this.get('page');
+      var totalPages = this.get('totalPages');
+      if (parseInt(totalPages) <= 0) {
+        return;
+      }
+
+      this.trigger('pageChanged', page);
+
+      if (page < 1 || page > totalPages) {
+        this.trigger('invalidPage', { page: page, totalPages: totalPages, array: this });
+      }
+    }),
+
+    setOtherParam: function setOtherParam(k, v) {
+      if (!this.get('otherParams')) {
+        this.set('otherParams', {});
+      }
+
+      this.get('otherParams')[k] = v;
+      this.incrementProperty('paramsForBackendCounter');
+      _ember['default'].run.once(this, "pageChanged");
+    }
+  });
+});
+define('ember-cli-pagination/remote/route-mixin', ['exports', 'ember', 'ember-cli-pagination/remote/paged-remote-array', 'ember-cli-pagination/util'], function (exports, _ember, _emberCliPaginationRemotePagedRemoteArray, _emberCliPaginationUtil) {
+  'use strict';
+
+  exports['default'] = _ember['default'].Mixin.create({
+    perPage: 10,
+    startingPage: 1,
+
+    model: function model(params) {
+      return this.findPaged(this._findModelName(this.get('routeName')), params);
+    },
+
+    _findModelName: function _findModelName(routeName) {
+      return _ember['default'].String.singularize(_ember['default'].String.camelize(routeName));
+    },
+
+    findPaged: function findPaged(name, params, callback) {
+      var mainOps = {
+        page: params.page || this.get('startingPage'),
+        perPage: params.perPage || this.get('perPage'),
+        modelName: name,
+        store: this.store
+      };
+
+      if (params.paramMapping) {
+        mainOps.paramMapping = params.paramMapping;
+      }
+
+      var otherOps = _emberCliPaginationUtil['default'].paramsOtherThan(params, ["page", "perPage", "paramMapping"]);
+      mainOps.otherParams = otherOps;
+
+      mainOps.initCallback = callback;
+
+      return _emberCliPaginationRemotePagedRemoteArray['default'].create(mainOps);
+    }
+  });
+});
+define('ember-cli-pagination/test-helpers', ['exports', 'ember', 'ember-cli-pagination/divide-into-pages'], function (exports, _ember, _emberCliPaginationDivideIntoPages) {
+  'use strict';
+
+  var TestHelpers = _ember['default'].Object.extend({
+    responseHash: function responseHash() {
+      var page = this.pageFromRequest(this.request);
+      var k = "" + this.name + "s";
+
+      var res = {};
+      res[k] = this.objsForPage(page);
+      res.meta = { total_pages: this.totalPages() };
+
+      return res;
+    },
+
+    divideObj: function divideObj() {
+      var perPage = this.perPageFromRequest(this.request);
+      return _emberCliPaginationDivideIntoPages['default'].create({ perPage: perPage, all: this.all });
+    },
+
+    objsForPage: function objsForPage(page) {
+      return this.divideObj().objsForPage(page);
+    },
+
+    pageFromRequest: function pageFromRequest(request) {
+      var res = request.queryParams.page;
+      return parseInt(res);
+    },
+
+    perPageFromRequest: function perPageFromRequest(request) {
+      var res = request.queryParams.per_page;
+      return parseInt(res);
+    },
+
+    totalPages: function totalPages() {
+      return this.divideObj().totalPages();
+    }
+  });
+
+  TestHelpers.reopenClass({
+    responseHash: function responseHash(request, all, name) {
+      return this.create({
+        request: request,
+        all: all,
+        name: name
+      }).responseHash();
+    }
+  });
+
+  exports['default'] = TestHelpers;
+});
+define('ember-cli-pagination/util', ['exports', 'ember'], function (exports, _ember) {
+  'use strict';
+
+  var Util = _ember['default'].Object.extend();
+
+  Util.reopenClass({
+    log: function log() {},
+
+    isBlank: function isBlank(obj) {
+      if (obj === 0) {
+        return false;
+      }
+      return !obj || obj === "";
+    },
+
+    keysOtherThan: function keysOtherThan(params, excludeKeys) {
+      excludeKeys = _ember['default'].A(excludeKeys);
+      var res = [];
+      for (var key in params) {
+        if (!excludeKeys.includes(key)) {
+          res.push(key);
+        }
+      }
+      return res;
+    },
+
+    paramsOtherThan: function paramsOtherThan(params, excludeKeys) {
+      var res = {};
+      var keys = this.keysOtherThan(params, excludeKeys);
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        var val = params[key];
+        res[key] = val;
+      }
+      return res;
+    },
+
+    mergeHashes: function mergeHashes(a, b) {
+      var res = {};
+      var val;
+      var key;
+
+      for (key in a) {
+        val = a[key];
+        res[key] = val;
+      }
+
+      for (key in b) {
+        val = b[key];
+        res[key] = val;
+      }
+
+      return res;
+    },
+
+    isFunction: function isFunction(obj) {
+      return typeof obj === 'function';
+    },
+
+    getHashKeyForValue: function getHashKeyForValue(hash, targetVal) {
+      for (var k in hash) {
+        var val = hash[k];
+        if (val === targetVal) {
+          return k;
+        } else if (Util.isFunction(targetVal) && targetVal(val)) {
+          return k;
+        }
+      }
+      return undefined;
+    }
+  });
+
+  exports['default'] = Util;
+});
+define('ember-cli-pagination/util/safe-get', ['exports', 'ember', 'ember-cli-pagination/validate', 'ember-cli-pagination/util'], function (exports, _ember, _emberCliPaginationValidate, _emberCliPaginationUtil) {
+  'use strict';
+
+  exports['default'] = _ember['default'].Mixin.create({
+    getInt: function getInt(prop) {
+      var raw = this.get(prop);
+      if (raw === 0 || raw === "0") {
+        // do nothing
+      } else if (_emberCliPaginationUtil['default'].isBlank(raw)) {
+          _emberCliPaginationValidate['default'].internalError("no int for " + prop + " val is " + raw);
+        }
+      return parseInt(raw);
+    }
+  });
+});
+define('ember-cli-pagination/validate', ['exports', 'ember'], function (exports, _ember) {
+  'use strict';
+
+  var Validate = _ember['default'].Object.extend();
+
+  Validate.reopenClass({
+    internalErrors: [],
+
+    internalError: function internalError(str, obj) {
+      this.internalErrors.push(str);
+      _ember['default'].Logger.warn(str);
+      if (obj) {
+        _ember['default'].Logger.warn(obj);
+      }
+    },
+
+    getLastInternalError: function getLastInternalError() {
+      return this.internalErrors[this.internalErrors.length - 1];
+    }
+  });
+
+  exports['default'] = Validate;
+});
+define('ember-cli-pagination/watch/lock-to-range', ['exports'], function (exports) {
+  'use strict';
+
+  exports['default'] = {
+    watch: function watch(paged) {
+      paged.on('invalidPage', function (event) {
+        if (event.page < 1) {
+          paged.set('page', 1);
+        } else if (event.page > event.totalPages) {
+          paged.set('page', event.totalPages);
+        }
+      });
+    }
+  };
 });
 define("ember-data/-private/adapters", ["exports", "ember-data/adapters/json-api", "ember-data/adapters/rest"], function (exports, _emberDataAdaptersJsonApi, _emberDataAdaptersRest) {
   /**
@@ -91652,6 +92589,381 @@ define('ember-wormhole/utils/dom', ['exports'], function (exports) {
       throw new Error('ember-wormhole could not get DOM');
     }
   }
+});
+define('emberx-select/components/x-option', ['exports', 'ember', 'emberx-select/components/x-select'], function (exports, _ember, _emberxSelectComponentsXSelect) {
+  'use strict';
+
+  var isArray = _ember['default'].isArray;
+
+  /**
+   * Used to wrap a native `<option>` tag and associate an object with
+   * it that can be bound. It can only be used in conjuction with a
+   * containing `x-select` component
+   *
+   * @class Ember.XOptionComponent
+   * @extends Ember.Component
+   */
+  exports['default'] = _ember['default'].Component.extend({
+    tagName: 'option',
+    attributeBindings: ['selected', 'name', 'disabled', 'value', 'title'],
+    classNameBindings: [':x-option'],
+
+    /**
+     * The value associated with this option. When this option is
+     * selected, the `x-select` will fire its action with this
+     * value.
+     *
+     * @property value
+     * @type Object
+     * @default null
+     */
+    value: null,
+
+    /**
+     * Property bound to the `selected` attribute of the native
+     * `<option>` element. It is aware of the containing `x-select`'s
+     * value and will mark itself if it is the same.
+     *
+     * @private
+     * @property selected
+     * @type Boolean
+     */
+    selected: _ember['default'].computed('value', 'select.value', 'select.multiple', function () {
+      if (this.get('select.multiple') && isArray(this.get('select.value'))) {
+        var selectValue = _ember['default'].A(this.get('select.value'));
+
+        return selectValue.contains(this.get('value'));
+      } else {
+        return this.get('value') === this.get('select.value');
+      }
+    }),
+
+    /**
+     * Register this x-option with the containing `x-select`
+     *
+     * @override
+     */
+    didInsertElement: function didInsertElement() {
+      this._super.apply(this, arguments);
+      _ember['default'].run.scheduleOnce('afterRender', this, 'registerWithXSelect');
+    },
+
+    select: _ember['default'].computed(function () {
+      return this.nearestOfType(_emberxSelectComponentsXSelect['default']);
+    }),
+
+    registerWithXSelect: function registerWithXSelect() {
+      var select = this.get('select');
+      _ember['default'].assert("x-option component declared without enclosing x-select", !!select);
+      select.registerOption(this);
+    },
+
+    /**
+     * Unregister this x-option with its containing x-select.
+     *
+     * @override
+     */
+    willDestroyElement: function willDestroyElement() {
+      this._super.apply(this, arguments);
+      var select = this.get('select');
+      if (select) {
+        select.unregisterOption(this);
+      }
+    }
+  });
+});
+define("emberx-select/components/x-select", ["exports", "ember"], function (exports, _ember) {
+  "use strict";
+
+  var isArray = _ember["default"].isArray;
+
+  /**
+   * Wraps a native <select> element so that it can be object and
+   * binding aware. It is used in conjuction with the
+   * `x-option` component to construct select boxes. E.g.
+   *
+   *   {{#x-select value="bob" action="selectPerson"}}
+   *     {{x-option value="fred"}}Fred Flintstone{{/x-option}}
+   *     {{x-option value="bob"}}Bob Newhart{{/x-option}}
+   *   {{/x-select}}
+   *
+   * the options are always up to date, so that when the object bound to
+   * `value` changes, the corresponding option becomes selected.
+   *
+   * Whenever the select tag receives a change event, it will fire
+   * `action`
+   *
+   * @class Ember.XSelectComponent
+   * @extends Ember.Component
+   */
+  exports["default"] = _ember["default"].Component.extend({
+    tagName: "select",
+    classNameBindings: [":x-select"],
+    attributeBindings: ['disabled', 'tabindex', 'multiple', 'form', 'name', 'autofocus', 'required', 'size', 'title'],
+
+    /**
+     * Bound to the `disabled` attribute on the native <select> tag.
+     *
+     * @property disabled
+     * @type Boolean
+     * @default null
+     */
+    disabled: null,
+
+    /**
+     * Bound to the `multiple` attribute on the native <select> tag.
+     *
+     * @property multiple
+     * @type Boolean
+     * @default null
+     */
+    multiple: null,
+
+    /**
+     * Bound to the `tabindex` attribute on the native <select> tag.
+     *
+     * @property tabindex
+     * @type Integer
+     * @default 0
+     */
+    tabindex: 0,
+
+    /**
+     * Determies if one way data binding is enabled. If set to true the
+     * value of x-select will not be updated when changing options. Instead, you
+     * would consume the new value through an action. E.g.
+     *
+     * {{#x-select value=someVal one-way=true action=(action "selectionChanged")}}
+     *   {{!options here ....}}
+     * {{/x-select}}
+     *
+     * @property one-way
+     * @type Boolean
+     * @default false
+     */
+    'one-way': false,
+
+    /**
+     * oneWay alias is a backward-compatible attribute for a release that existed
+     * for a short time
+     *
+     * @deprecated
+     */
+    'oneWay': _ember["default"].computed.alias('one-way'),
+
+    /**
+     * Set to true when `willDestroyElement` is called.
+     *
+     * @private
+     * @property isXSelectDestroying
+     */
+    isXSelectDestroying: false,
+
+    /**
+     * The collection of options for this select box. When options are
+     * inserted into the dom, they will register themselves with their
+     * containing `x-select`. This is for internal book-keeping only and should
+     * not be changed from outside.
+     *
+     * @private
+     * @property options
+     */
+    options: _ember["default"].computed(function () {
+      return _ember["default"].A();
+    }),
+
+    /**
+     * When the select DOM event fires on the element, trigger the
+     * component's action with the current value.
+     */
+    change: function change(event) {
+      var nextValue = this._getValue();
+
+      if (!this.get('one-way')) {
+        this.set('value', nextValue);
+      }
+
+      this.sendAction('action', nextValue, this);
+      this.sendAction('onchange', this, nextValue, event);
+    },
+
+    /**
+     * When the click DOM event fires on the element, trigger the
+     * component's action with the component, x-select value, and the jQuery event.
+     */
+    click: function click(event) {
+      this.sendAction('onclick', this, this._getValue(), event);
+    },
+
+    /**
+     * When the blur DOM event fires on the element, trigger the
+     * component's action with the component, x-select value, and the jQuery event.
+     */
+    blur: function blur(event) {
+      this.sendAction('onblur', this, this._getValue(), event);
+    },
+
+    /**
+     * When the focusOut DOM event fires on the element, trigger the
+     * component's action with the component, x-select value, and the jQuery event.
+     */
+    focusOut: function focusOut(event) {
+      this.sendAction('onfocusout', this, this._getValue(), event);
+    },
+
+    /**
+     * Reads the current selection from this select's options.
+     *
+     * If this is a multi-select, then the value will be an
+     * array. Otherwise, it will be a single value which could be null.
+     *
+     * @private
+     * @return {Array|Object} the current selection
+     */
+    _getValue: function _getValue() {
+      var options = this.get('options').filter(function (option) {
+        return option.$().is(':selected');
+      });
+
+      if (this.get('multiple')) {
+        return _ember["default"].A(options).mapBy('value');
+      } else {
+        var option = options[0];
+        return option ? option.get('value') : null;
+      }
+    },
+
+    /**
+     * Reads the current value and sets it.
+     * @private
+     */
+    _updateValue: function _updateValue() {
+      if (this.isDestroying || this.isDestroyed) {
+        return;
+      }
+      this.set('value', this._getValue());
+    },
+
+    /**
+     * If no explicit value is set, apply default values based on selected=true in
+     * the template.
+     *
+     * @private
+     */
+    _setDefaultValues: function _setDefaultValues() {
+      if (this.get('value') == null) {
+        if (!this.get('one-way')) {
+          this._updateValue();
+        }
+
+        this.sendAction('action', this._getValue());
+      }
+    },
+
+    /**
+     * @override
+     */
+    didInsertElement: function didInsertElement() {
+      var _this = this;
+
+      this._super.apply(this, arguments);
+
+      this.$().on('blur', function (event) {
+        _this.blur(event);
+      });
+    },
+
+    /**
+     * @override
+     */
+    willDestroyElement: function willDestroyElement() {
+      this._super.apply(this, arguments);
+
+      this.set('isXSelectDestroying', true);
+
+      // might be overkill, but make sure options can get gc'd
+      this.get('options').clear();
+      this.$().off('blur');
+    },
+
+    /**
+     * If this is a multi-select, and the value is not an array, that
+     * probably indicates a misconfiguration somewhere, so we error out.
+     *
+     * @private
+     */
+    ensureProperType: _ember["default"].on('init', _ember["default"].observer('value', function () {
+      var value = this.get('value');
+
+      if (value != null && this.get('multiple') && !isArray(value)) {
+        throw new Error("x-select multiple=true was set, but value " + value + " is not enumerable.");
+      }
+    })),
+
+    /**
+     * @private
+     */
+    registerOption: function registerOption(option) {
+      this.get('options').addObject(option);
+      this._setDefaultValues();
+    },
+
+    /**
+     * @private
+     */
+    unregisterOption: function unregisterOption(option) {
+      this.get('options').removeObject(option);
+
+      // We don't want to update the value if we're tearing the component down.
+      if (!this.get('isXSelectDestroying')) {
+        this._updateValue();
+      }
+    }
+  });
+});
+define("emberx-select/templates/components/x-select", ["exports"], function (exports) {
+  "use strict";
+
+  exports["default"] = Ember.HTMLBars.template((function () {
+    return {
+      meta: {
+        "revision": "Ember@2.8.3",
+        "loc": {
+          "source": null,
+          "start": {
+            "line": 1,
+            "column": 0
+          },
+          "end": {
+            "line": 6,
+            "column": 0
+          }
+        },
+        "moduleName": "modules/emberx-select/templates/components/x-select.hbs"
+      },
+      isEmpty: false,
+      arity: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      buildFragment: function buildFragment(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+        var morphs = new Array(1);
+        morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
+        dom.insertBoundary(fragment, 0);
+        return morphs;
+      },
+      statements: [["inline", "yield", [["subexpr", "hash", [], ["option", ["subexpr", "component", ["x-option"], ["select", ["subexpr", "@mut", [["get", "this", ["loc", [null, [3, 40], [3, 44]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [3, 11], [3, 45]]], 0, 0]], ["loc", [null, [2, 2], [4, 3]]], 0, 0]], [], ["loc", [null, [1, 0], [5, 2]]], 0, 0]],
+      locals: [],
+      templates: []
+    };
+  })());
 });
 ;/* jshint ignore:start */
 

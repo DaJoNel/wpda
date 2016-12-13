@@ -9,7 +9,6 @@
 define('wpda-client/adapters/application', ['exports', 'ember-data'], function (exports, _emberData) {
 	exports['default'] = _emberData['default'].JSONAPIAdapter.extend({
 		namespace: 'api',
-		authorizer: 'authorizer:application',
 
 		// Ember does not append a trailing slash by default
 		buildURL: function buildURL(type, id, record) {
@@ -33,8 +32,6 @@ define('wpda-client/app', ['exports', 'ember', 'wpda-client/resolver', 'ember-lo
 
 	exports['default'] = App;
 });
-define("wpda-client/authenticators/oauth2", ["exports"], function (exports) {});
-define("wpda-client/authorizers/application", ["exports"], function (exports) {});
 define('wpda-client/components/app-version', ['exports', 'ember-cli-app-version/components/app-version', 'wpda-client/config/environment'], function (exports, _emberCliAppVersionComponentsAppVersion, _wpdaClientConfigEnvironment) {
 
   var name = _wpdaClientConfigEnvironment['default'].APP.name;
@@ -45,10 +42,15 @@ define('wpda-client/components/app-version', ['exports', 'ember-cli-app-version/
     name: name
   });
 });
-define('wpda-client/components/auth-manager', ['exports', 'ember'], function (exports, _ember) {
+define('wpda-client/components/auth-bar', ['exports', 'ember'], function (exports, _ember) {
 	exports['default'] = _ember['default'].Component.extend({
+		showRegInfo: false,
 		auth: _ember['default'].inject.service('auth-manager'),
+
 		actions: {
+			showRegInfo: function showRegInfo() {
+				this.set('showRegInfo', !this.get('showRegInfo'));
+			},
 			login: function login() {
 				this.get('auth').login();
 			},
@@ -344,10 +346,169 @@ define('wpda-client/components/ember-wormhole', ['exports', 'ember-wormhole/comp
     }
   });
 });
-define('wpda-client/components/place-list', ['exports', 'ember'], function (exports, _ember) {
-    exports['default'] = _ember['default'].Component.extend({
-        authManager: _ember['default'].inject.service('session')
-    });
+define('wpda-client/components/nav-bar', ['exports', 'ember'], function (exports, _ember) {
+	exports['default'] = _ember['default'].Component.extend({
+		auth: _ember['default'].inject.service('auth-manager')
+	});
+});
+define('wpda-client/components/page-numbers', ['exports', 'ember', 'ember-cli-pagination/util', 'ember-cli-pagination/lib/page-items', 'ember-cli-pagination/validate'], function (exports, _ember, _emberCliPaginationUtil, _emberCliPaginationLibPageItems, _emberCliPaginationValidate) {
+  exports['default'] = _ember['default'].Component.extend({
+    currentPageBinding: "content.page",
+    totalPagesBinding: "content.totalPages",
+
+    hasPages: _ember['default'].computed.gt('totalPages', 1),
+
+    watchInvalidPage: _ember['default'].observer("content", function () {
+      var _this = this;
+
+      var c = this.get('content');
+      if (c && c.on) {
+        c.on('invalidPage', function (e) {
+          _this.sendAction('invalidPageAction', e);
+        });
+      }
+    }),
+
+    truncatePages: true,
+    numPagesToShow: 10,
+
+    validate: function validate() {
+      if (_emberCliPaginationUtil['default'].isBlank(this.get('currentPage'))) {
+        _emberCliPaginationValidate['default'].internalError("no currentPage for page-numbers");
+      }
+      if (_emberCliPaginationUtil['default'].isBlank(this.get('totalPages'))) {
+        _emberCliPaginationValidate['default'].internalError('no totalPages for page-numbers');
+      }
+    },
+
+    pageItemsObj: _ember['default'].computed(function () {
+      return _emberCliPaginationLibPageItems['default'].create({
+        parent: this,
+        currentPageBinding: "parent.currentPage",
+        totalPagesBinding: "parent.totalPages",
+        truncatePagesBinding: "parent.truncatePages",
+        numPagesToShowBinding: "parent.numPagesToShow",
+        showFLBinding: "parent.showFL"
+      });
+    }),
+
+    //pageItemsBinding: "pageItemsObj.pageItems",
+
+    pageItems: _ember['default'].computed("pageItemsObj.pageItems", "pageItemsObj", function () {
+      this.validate();
+      return this.get("pageItemsObj.pageItems");
+    }),
+
+    canStepForward: _ember['default'].computed("currentPage", "totalPages", function () {
+      var page = Number(this.get("currentPage"));
+      var totalPages = Number(this.get("totalPages"));
+      return page < totalPages;
+    }),
+
+    canStepBackward: _ember['default'].computed("currentPage", function () {
+      var page = Number(this.get("currentPage"));
+      return page > 1;
+    }),
+
+    actions: {
+      pageClicked: function pageClicked(number) {
+        _emberCliPaginationUtil['default'].log("PageNumbers#pageClicked number " + number);
+        this.set("currentPage", number);
+        this.sendAction('action', number);
+      },
+      incrementPage: function incrementPage(num) {
+        var currentPage = Number(this.get("currentPage")),
+            totalPages = Number(this.get("totalPages"));
+
+        if (currentPage === totalPages && num === 1) {
+          return false;
+        }
+        if (currentPage <= 1 && num === -1) {
+          return false;
+        }
+        this.incrementProperty('currentPage', num);
+
+        var newPage = this.get('currentPage');
+        this.sendAction('action', newPage);
+      }
+    }
+  });
+});
+define('wpda-client/components/x-option', ['exports', 'emberx-select/components/x-option'], function (exports, _emberxSelectComponentsXOption) {
+  exports['default'] = _emberxSelectComponentsXOption['default'];
+});
+define('wpda-client/components/x-select', ['exports', 'emberx-select/components/x-select'], function (exports, _emberxSelectComponentsXSelect) {
+  exports['default'] = _emberxSelectComponentsXSelect['default'];
+});
+define('wpda-client/controllers/register', ['exports', 'ember'], function (exports, _ember) {
+	exports['default'] = _ember['default'].Controller.extend({
+		confirmpassword: '',
+		showPolicy: false,
+		success: false,
+		agree: false,
+
+		//client-side validators
+		usernameChanged: _ember['default'].observer('content.user.username', function () {
+			//validate here
+		}),
+		passwordChanged: _ember['default'].observer('content.user.password', function () {
+			var user = this.get('content').user;
+			if (user.get('password') === undefined || user.get('password') === '') {
+				this.set('passworderror', 'You must specify a password.');
+				this.set('passwordclasses', 'has-error');
+			} else if (user.get('password').length < 8) {
+				this.set('passworderror', 'Your password must be at least 8 characters');
+				this.set('passwordclasses', 'has-error');
+			} else {
+				this.set('passworderror', null);
+				this.set('passwordclasses', '');
+			}
+		}),
+		//...other validators go here
+
+		//actions
+		actions: {
+			showPolicy: function showPolicy() {
+				this.set('showPolicy', !this.get('showPolicy'));
+			},
+			register: function register() {
+				this.set('validationErrorMsg', '');
+				var user = this.get('content').user;
+				var profile = this.get('content').profile;
+				var t = this;
+				//probably want to do some additional validation here
+				if (user.get('password') === this.get('confirmpassword')) {
+					var requestdata = {
+						'username': user.get("username"),
+						'password': user.get('password'),
+						'email': user.get('email'),
+						'wazeName': user.get('wazeName'),
+						'wazeLevel': user.get('wazeLevel')
+					};
+					_ember['default'].$.post('../api/register/', requestdata, function (response) {
+						var errMsg = '';
+						if (response.data.status === "error") {
+							if (response.data.username) {
+								errMsg = response.data.username;
+							} else if (response.data.email) {
+								errMsg = response.data.email;
+							} else {
+								errMsg = "An unknown error occured. Please try again";
+							}
+							t.set('validationErrorMsg', errMsg);
+						} else {
+							//success
+							t.set('success', true);
+							//could forward the user to another page (like home)
+							//t.transitionTo('home');
+						}
+					});
+				} else {
+						this.set('validationErrorMsg', 'Passwords don\'t match');
+					}
+			}
+		}
+	});
 });
 define('wpda-client/helpers/bs-contains', ['exports', 'ember-bootstrap/helpers/bs-contains'], function (exports, _emberBootstrapHelpersBsContains) {
   Object.defineProperty(exports, 'default', {
@@ -416,6 +577,18 @@ define('wpda-client/initializers/app-version', ['exports', 'ember-cli-app-versio
     name: 'App Version',
     initialize: (0, _emberCliAppVersionInitializerFactory['default'])(_wpdaClientConfigEnvironment['default'].APP.name, _wpdaClientConfigEnvironment['default'].APP.version)
   };
+});
+define('wpda-client/initializers/auth-manager', ['exports'], function (exports) {
+    exports.initialize = initialize;
+
+    function initialize() /* application */{
+        // application.inject('route', 'foo', 'service:foo');
+    }
+
+    exports['default'] = {
+        name: 'auth-manager',
+        initialize: initialize
+    };
 });
 define('wpda-client/initializers/bootstrap-linkto', ['exports', 'ember-bootstrap/initializers/bootstrap-linkto'], function (exports, _emberBootstrapInitializersBootstrapLinkto) {
   Object.defineProperty(exports, 'default', {
@@ -630,6 +803,21 @@ define('wpda-client/models/place', ['exports', 'ember-data'], function (exports,
 		isResidential: _emberData['default'].attr('boolean')
 	});
 });
+define('wpda-client/models/profile', ['exports', 'ember-data'], function (exports, _emberData) {
+	exports['default'] = _emberData['default'].Model.extend({
+		user: _emberData['default'].belongsTo('user'),
+		wazeName: _emberData['default'].attr('string'),
+		wazeLevel: _emberData['default'].attr('number')
+	});
+});
+define('wpda-client/models/user', ['exports', 'ember-data'], function (exports, _emberData) {
+	exports['default'] = _emberData['default'].Model.extend({
+		profile: _emberData['default'].belongsTo('profile'),
+		username: _emberData['default'].attr('string'),
+		email: _emberData['default'].attr('string'),
+		password: _emberData['default'].attr('string')
+	});
+});
 define('wpda-client/resolver', ['exports', 'ember-resolver'], function (exports, _emberResolver) {
   exports['default'] = _emberResolver['default'];
 });
@@ -641,6 +829,14 @@ define('wpda-client/router', ['exports', 'ember', 'wpda-client/config/environmen
     });
 
     Router.map(function () {
+        this.route('login');
+        this.route('register');
+        this.route('admin', function () {
+            this.route('users');
+            this.route('user', { path: "/users/:user_id" });
+        });
+        this.route('home');
+        this.route('watch-place');
         this.route('profile');
     });
 
@@ -653,8 +849,24 @@ define('wpda-client/routes/application', ['exports', 'ember'], function (exports
 		}
 	});
 });
+define('wpda-client/routes/index', ['exports', 'ember'], function (exports, _ember) {
+  exports['default'] = _ember['default'].Route.extend({});
+});
 define('wpda-client/routes/profile', ['exports', 'ember'], function (exports, _ember) {
-  exports['default'] = _ember['default'].Route.extend();
+  exports['default'] = _ember['default'].Route.extend({});
+});
+define('wpda-client/routes/register', ['exports', 'ember', 'rsvp'], function (exports, _ember, _rsvp) {
+    exports['default'] = _ember['default'].Route.extend({
+        model: function model() {
+            return _rsvp['default'].hash({
+                user: this.store.createRecord('user'),
+                profile: this.store.createRecord('profile')
+            });
+        }
+    });
+});
+define('wpda-client/routes/watch-place', ['exports', 'ember'], function (exports, _ember) {
+  exports['default'] = _ember['default'].Route.extend({});
 });
 define('wpda-client/serializers/application', ['exports', 'ember-data'], function (exports, _emberData) {
     exports['default'] = _emberData['default'].JSONAPISerializer.extend({
@@ -672,6 +884,109 @@ define('wpda-client/services/ajax', ['exports', 'ember-ajax/services/ajax'], fun
     }
   });
 });
+define('wpda-client/services/auth-manager', ['exports', 'ember'], function (exports, _ember) {
+	exports['default'] = _ember['default'].Service.extend({
+		store: _ember['default'].inject.service('store'),
+
+		//field vars
+		username: '',
+		password: '',
+		remember: false,
+		errorMsg: '',
+
+		//stored data
+		user: null,
+		profile: null,
+		isLoggedIn: false,
+		login: function login() {
+			console.log('Logging in:');
+
+			//retrieve field data
+			var username = this.get('username');
+			var password = this.get('password');
+			var remember = this.get('remember');
+
+			var data = {
+				'username': username,
+				'password': password };
+			var auth = this;
+
+			//make api request
+			_ember['default'].$.post('../api/session/', data, function (response) {
+				if (response.data.isauthenticated) {
+					//success
+					auth.set('user', auth.get('store').findRecord('user', response.data.userid));
+					auth.set('profile', auth.get('store').findRecord('profile', response.data.userid));
+					auth.set('isLoggedIn', true);
+
+					if (remember) {
+						//save username and pass to local storage
+						localStorage.setItem('remember', true);
+						localStorage.setItem('username', auth.get('username'));
+						localStorage.setItem('password', auth.get('password'));
+					} else {
+						localStorage.removeItem('remember');
+						localStorage.removeItem('username');
+						localStorage.removeItem('password');
+					}
+					auth.set('password', '');
+					console.log('Login POST Request to ../api/session/ was successful.');
+				} else {
+					//errors
+					console.log('Login POST Request to ../api/session/ was unsuccessful.');
+					auth.set('errorMsg', response.data.message);
+				}
+			});
+		},
+		logout: function logout() {
+			console.log('Logging out');
+			var auth = this;
+			_ember['default'].$.ajax({ url: '../api/session/', type: 'DELETE' }).then(function (response) {
+				console.log('Logout DELETE Request to ../api/session/ was successful:' + response);
+				auth.set('isLoggedIn', false);
+				auth.set('errorMsg', '');
+				auth.set('username', '');
+				auth.set('user', null);
+				auth.set('profile', null);
+
+				if (localStorage.remember) {
+					auth.set('remember', localStorage.remember);
+					auth.set('username', localStorage.username);
+					auth.set('password', localStorage.password);
+				}
+			});
+		},
+		/**
+  	called whenever the application loads to initialize any stored session/local variables
+  **/
+		init: function init() {
+			this._super();
+			var auth = this;
+
+			//handle session and local variable loading
+			this.set('remember', localStorage.remember);
+
+			if (auth.get('remember')) {
+				auth.set('username', localStorage.username);
+				auth.set('password', localStorage.password);
+			}
+
+			//check to see if the user is logged into the API
+			_ember['default'].$.get('../api/session', function (response) {
+				if (response.data.isauthenticated) {
+					//success
+					console.log('The user: \'' + response.data.username + '\' is currently logged in.');
+					auth.set('user', auth.get('store').findRecord('user', response.data.userid));
+					auth.set('profile', auth.get('store').findRecord('profile', response.data.userid));
+					auth.set('isLoggedIn', true);
+				} else {
+					//errors
+					console.log('The user is not currently logged in.');
+				}
+			});
+		}
+	});
+});
 define("wpda-client/templates/application", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template((function () {
     return {
@@ -684,7 +999,7 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
             "column": 0
           },
           "end": {
-            "line": 14,
+            "line": 9,
             "column": 0
           }
         },
@@ -696,36 +1011,28 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
       hasRendered: false,
       buildFragment: function buildFragment(dom) {
         var el0 = dom.createDocumentFragment();
-        var el1 = dom.createElement("nav");
-        dom.setAttribute(el1, "class", "navbar navbar-default navbar-fixed-top");
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("div");
+        dom.setAttribute(el1, "class", "container-fluid");
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createComment("");
+        dom.appendChild(el1, el2);
         var el2 = dom.createTextNode("\n	");
         dom.appendChild(el1, el2);
         var el2 = dom.createElement("div");
-        dom.setAttribute(el2, "class", "container-fluid");
-        var el3 = dom.createTextNode("\n		");
+        dom.setAttribute(el2, "class", "clr");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("footer");
+        var el3 = dom.createTextNode("\n	    ");
         dom.appendChild(el2, el3);
-        var el3 = dom.createElement("div");
-        dom.setAttribute(el3, "class", "navbar-header");
-        var el4 = dom.createTextNode("\n			");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createElement("a");
-        dom.setAttribute(el4, "class", "navbar-brand");
-        dom.setAttribute(el4, "href", "#");
-        var el5 = dom.createTextNode("WPDA");
-        dom.appendChild(el4, el5);
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n		");
-        dom.appendChild(el3, el4);
-        dom.appendChild(el2, el3);
-        var el3 = dom.createTextNode("\n		");
-        dom.appendChild(el2, el3);
-        var el3 = dom.createElement("div");
-        dom.setAttribute(el3, "class", "navbar-right");
-        var el4 = dom.createTextNode("\n			");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createComment("");
-        dom.appendChild(el3, el4);
-        var el4 = dom.createTextNode("\n		");
+        var el3 = dom.createElement("p");
+        var el4 = dom.createTextNode("Copyright © 2016 David Nelson");
         dom.appendChild(el3, el4);
         dom.appendChild(el2, el3);
         var el3 = dom.createTextNode("\n	");
@@ -736,32 +1043,22 @@ define("wpda-client/templates/application", ["exports"], function (exports) {
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n");
         dom.appendChild(el0, el1);
-        var el1 = dom.createElement("div");
-        dom.setAttribute(el1, "class", "container-fluid");
-        var el2 = dom.createTextNode("\n	");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createComment("");
-        dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
         return el0;
       },
       buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
         var morphs = new Array(2);
-        morphs[0] = dom.createMorphAt(dom.childAt(fragment, [0, 1, 3]), 1, 1);
+        morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
         morphs[1] = dom.createMorphAt(dom.childAt(fragment, [2]), 1, 1);
+        dom.insertBoundary(fragment, 0);
         return morphs;
       },
-      statements: [["content", "auth-manager", ["loc", [null, [7, 3], [7, 19]]], 0, 0, 0, 0], ["inline", "place-list", [], ["model", ["subexpr", "@mut", [["get", "model", ["loc", [null, [12, 20], [12, 25]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [12, 1], [12, 27]]], 0, 0]],
+      statements: [["content", "nav-bar", ["loc", [null, [1, 0], [1, 11]]], 0, 0, 0, 0], ["content", "outlet", ["loc", [null, [3, 1], [3, 11]]], 0, 0, 0, 0]],
       locals: [],
       templates: []
     };
   })());
 });
-define("wpda-client/templates/components/auth-manager", ["exports"], function (exports) {
+define("wpda-client/templates/components/auth-bar", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template((function () {
     var child0 = (function () {
       return {
@@ -774,11 +1071,11 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
               "column": 0
             },
             "end": {
-              "line": 5,
+              "line": 6,
               "column": 0
             }
           },
-          "moduleName": "wpda-client/templates/components/auth-manager.hbs"
+          "moduleName": "wpda-client/templates/components/auth-bar.hbs"
         },
         isEmpty: false,
         arity: 0,
@@ -786,14 +1083,29 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
         hasRendered: false,
         buildFragment: function buildFragment(dom) {
           var el0 = dom.createDocumentFragment();
-          var el1 = dom.createElement("p");
-          dom.setAttribute(el1, "class", "auth-form");
+          var el1 = dom.createTextNode(" ");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("form");
+          dom.setAttribute(el1, "class", "navbar-form");
+          var el2 = dom.createTextNode("\n	");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("label");
+          dom.setAttribute(el2, "class", "control-label");
+          dom.setAttribute(el2, "for", "logout");
+          var el3 = dom.createTextNode("Hello, ");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createComment("");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
           var el2 = dom.createTextNode("\n	");
           dom.appendChild(el1, el2);
           var el2 = dom.createElement("button");
           dom.setAttribute(el2, "type", "button");
+          dom.setAttribute(el2, "name", "logout");
           dom.setAttribute(el2, "class", "btn btn-default");
-          var el3 = dom.createTextNode("Logout");
+          var el3 = dom.createTextNode("Log out");
           dom.appendChild(el2, el3);
           dom.appendChild(el1, el2);
           var el2 = dom.createTextNode("\n");
@@ -804,12 +1116,14 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
           return el0;
         },
         buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-          var element1 = dom.childAt(fragment, [0, 1]);
-          var morphs = new Array(1);
-          morphs[0] = dom.createElementMorph(element1);
+          var element4 = dom.childAt(fragment, [2]);
+          var element5 = dom.childAt(element4, [3]);
+          var morphs = new Array(2);
+          morphs[0] = dom.createMorphAt(dom.childAt(element4, [1]), 1, 1);
+          morphs[1] = dom.createElementMorph(element5);
           return morphs;
         },
-        statements: [["element", "action", ["invalidateSession"], [], ["loc", [null, [3, 47], [3, 77]]], 0, 0]],
+        statements: [["content", "auth.user.username", ["loc", [null, [3, 50], [3, 72]]], 0, 0, 0, 0], ["element", "action", ["logout"], [], ["loc", [null, [4, 61], [4, 80]]], 0, 0]],
         locals: [],
         templates: []
       };
@@ -822,15 +1136,98 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
             "loc": {
               "source": null,
               "start": {
-                "line": 16,
+                "line": 8,
                 "column": 1
               },
               "end": {
-                "line": 18,
+                "line": 12,
                 "column": 1
               }
             },
-            "moduleName": "wpda-client/templates/components/auth-manager.hbs"
+            "moduleName": "wpda-client/templates/components/auth-bar.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("		");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("div");
+            dom.setAttribute(el1, "class", "auth-error alert");
+            var el2 = dom.createTextNode("\n			");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createComment("");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n		");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var morphs = new Array(1);
+            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 1, 1);
+            return morphs;
+          },
+          statements: [["content", "auth.errorMsg", ["loc", [null, [10, 3], [10, 20]]], 0, 0, 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
+      var child1 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 20,
+                "column": 2
+              },
+              "end": {
+                "line": 20,
+                "column": 38
+              }
+            },
+            "moduleName": "wpda-client/templates/components/auth-bar.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("Register now.");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes() {
+            return [];
+          },
+          statements: [],
+          locals: [],
+          templates: []
+        };
+      })();
+      var child2 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 24,
+                "column": 0
+              },
+              "end": {
+                "line": 26,
+                "column": 0
+              }
+            },
+            "moduleName": "wpda-client/templates/components/auth-bar.hbs"
           },
           isEmpty: false,
           arity: 0,
@@ -841,19 +1238,17 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
             var el1 = dom.createTextNode("	");
             dom.appendChild(el0, el1);
             var el1 = dom.createElement("p");
-            var el2 = dom.createComment("");
+            var el2 = dom.createTextNode("Register to WPDA in order to save custom queries, watch specific venues for changes, and more.");
             dom.appendChild(el1, el2);
             dom.appendChild(el0, el1);
             var el1 = dom.createTextNode("\n");
             dom.appendChild(el0, el1);
             return el0;
           },
-          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-            var morphs = new Array(1);
-            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 0, 0);
-            return morphs;
+          buildRenderNodes: function buildRenderNodes() {
+            return [];
           },
-          statements: [["content", "error", ["loc", [null, [17, 4], [17, 13]]], 0, 0, 0, 0]],
+          statements: [],
           locals: [],
           templates: []
         };
@@ -864,15 +1259,15 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
           "loc": {
             "source": null,
             "start": {
-              "line": 5,
+              "line": 6,
               "column": 0
             },
             "end": {
-              "line": 20,
+              "line": 27,
               "column": 0
             }
           },
-          "moduleName": "wpda-client/templates/components/auth-manager.hbs"
+          "moduleName": "wpda-client/templates/components/auth-bar.hbs"
         },
         isEmpty: false,
         arity: 0,
@@ -880,75 +1275,93 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
         hasRendered: false,
         buildFragment: function buildFragment(dom) {
           var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode(" ");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
           var el1 = dom.createElement("form");
-          dom.setAttribute(el1, "class", "form-inline auth-form");
-          var el2 = dom.createTextNode("\n	");
+          dom.setAttribute(el1, "class", "navbar-form");
+          var el2 = dom.createTextNode("\n");
           dom.appendChild(el1, el2);
-          var el2 = dom.createElement("div");
-          dom.setAttribute(el2, "class", "form-group");
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createElement("label");
-          dom.setAttribute(el3, "class", "control-label");
-          dom.setAttribute(el3, "for", "username");
-          var el4 = dom.createTextNode("Username");
-          dom.appendChild(el3, el4);
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createComment("");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n	");
-          dom.appendChild(el2, el3);
+          var el2 = dom.createComment("");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("	");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createComment("");
           dom.appendChild(el1, el2);
           var el2 = dom.createTextNode("\n	");
           dom.appendChild(el1, el2);
-          var el2 = dom.createElement("div");
-          dom.setAttribute(el2, "class", "form-group");
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createElement("label");
-          dom.setAttribute(el3, "class", "control-label");
-          dom.setAttribute(el3, "for", "password");
-          var el4 = dom.createTextNode("Password");
-          dom.appendChild(el3, el4);
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n		");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createComment("");
-          dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n	");
+          var el2 = dom.createComment("");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n	");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createComment("");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n	");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("label");
+          dom.setAttribute(el2, "class", "control-label checkbox");
+          dom.setAttribute(el2, "for", "remember");
+          var el3 = dom.createTextNode("Remember me");
           dom.appendChild(el2, el3);
           dom.appendChild(el1, el2);
           var el2 = dom.createTextNode("\n	");
           dom.appendChild(el1, el2);
           var el2 = dom.createElement("button");
-          dom.setAttribute(el2, "type", "submit");
+          dom.setAttribute(el2, "type", "button");
           dom.setAttribute(el2, "class", "btn btn-default");
           var el3 = dom.createTextNode("Login");
           dom.appendChild(el2, el3);
           dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n");
+          var el2 = dom.createTextNode("\n	");
           dom.appendChild(el1, el2);
-          var el2 = dom.createComment("");
+          var el2 = dom.createElement("br");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n	");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("p");
+          dom.setAttribute(el2, "class", "no-account right margin-3");
+          var el3 = dom.createTextNode("Don't have an account?\n		");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createComment("");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createTextNode("\n		");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createElement("a");
+          dom.setAttribute(el3, "class", "glyphicon glyphicon-info-sign info-icon");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createTextNode("\n	");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n");
           dom.appendChild(el1, el2);
           dom.appendChild(el0, el1);
           var el1 = dom.createTextNode("\n");
           dom.appendChild(el0, el1);
+          var el1 = dom.createComment("");
+          dom.appendChild(el0, el1);
           return el0;
         },
         buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-          var element0 = dom.childAt(fragment, [0]);
-          var morphs = new Array(4);
-          morphs[0] = dom.createElementMorph(element0);
-          morphs[1] = dom.createMorphAt(dom.childAt(element0, [1]), 3, 3);
-          morphs[2] = dom.createMorphAt(dom.childAt(element0, [3]), 3, 3);
+          var element0 = dom.childAt(fragment, [2]);
+          var element1 = dom.childAt(element0, [11]);
+          var element2 = dom.childAt(element0, [15]);
+          var element3 = dom.childAt(element2, [3]);
+          var morphs = new Array(8);
+          morphs[0] = dom.createMorphAt(element0, 1, 1);
+          morphs[1] = dom.createMorphAt(element0, 3, 3);
+          morphs[2] = dom.createMorphAt(element0, 5, 5);
           morphs[3] = dom.createMorphAt(element0, 7, 7);
+          morphs[4] = dom.createElementMorph(element1);
+          morphs[5] = dom.createMorphAt(element2, 1, 1);
+          morphs[6] = dom.createElementMorph(element3);
+          morphs[7] = dom.createMorphAt(fragment, 4, 4, contextualElement);
+          dom.insertBoundary(fragment, null);
           return morphs;
         },
-        statements: [["element", "action", ["authenticate"], [], ["loc", [null, [6, 36], [6, 61]]], 0, 0], ["inline", "input", [], ["class", "form-control auth-field", "id", "username", "placeholder", "Enter Username", "value", ["subexpr", "@mut", [["get", "username", ["loc", [null, [9, 91], [9, 99]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [9, 2], [9, 101]]], 0, 0], ["inline", "input", [], ["class", "form-control auth-field", "id", "password", "placeholder", "Enter Password", "type", "password", "value", ["subexpr", "@mut", [["get", "password", ["loc", [null, [13, 107], [13, 115]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [13, 2], [13, 117]]], 0, 0], ["block", "if", [["get", "error", ["loc", [null, [16, 7], [16, 12]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [16, 1], [18, 8]]]]],
+        statements: [["block", "if", [["get", "auth.errorMsg", ["loc", [null, [8, 7], [8, 20]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [8, 1], [12, 8]]]], ["inline", "input", [], ["type", "text", "class", "input form-control auth-field", "value", ["subexpr", "@mut", [["get", "auth.username", ["loc", [null, [13, 65], [13, 78]]], 0, 0, 0, 0]], [], [], 0, 0], "enter", "login", "placeholder", "Username"], ["loc", [null, [13, 1], [13, 117]]], 0, 0], ["inline", "input", [], ["type", "text", "class", "input form-control auth-field", "value", ["subexpr", "@mut", [["get", "auth.password", ["loc", [null, [14, 65], [14, 78]]], 0, 0, 0, 0]], [], [], 0, 0], "enter", "login", "placeholder", "Password", "type", "password"], ["loc", [null, [14, 1], [14, 133]]], 0, 0], ["inline", "input", [], ["class", "checkbox", "type", "checkbox", "checked", ["subexpr", "@mut", [["get", "auth.remember", ["loc", [null, [15, 50], [15, 63]]], 0, 0, 0, 0]], [], [], 0, 0], "name", "remember"], ["loc", [null, [15, 1], [15, 81]]], 0, 0], ["element", "action", ["login"], [], ["loc", [null, [17, 47], [17, 65]]], 0, 0], ["block", "link-to", ["register"], [], 1, null, ["loc", [null, [20, 2], [20, 50]]]], ["element", "action", ["showRegInfo"], [], ["loc", [null, [21, 53], [21, 77]]], 0, 0], ["block", "bs-modal", [], ["open", ["subexpr", "@mut", [["get", "showRegInfo", ["loc", [null, [24, 17], [24, 28]]], 0, 0, 0, 0]], [], [], 0, 0], "title", "Why register?", "footer", false], 2, null, ["loc", [null, [24, 0], [26, 13]]]]],
         locals: [],
-        templates: [child0]
+        templates: [child0, child1, child2]
       };
     })();
     return {
@@ -961,11 +1374,11 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
             "column": 0
           },
           "end": {
-            "line": 21,
+            "line": 28,
             "column": 0
           }
         },
-        "moduleName": "wpda-client/templates/components/auth-manager.hbs"
+        "moduleName": "wpda-client/templates/components/auth-bar.hbs"
       },
       isEmpty: false,
       arity: 0,
@@ -984,7 +1397,7 @@ define("wpda-client/templates/components/auth-manager", ["exports"], function (e
         dom.insertBoundary(fragment, null);
         return morphs;
       },
-      statements: [["block", "if", [["get", "session.isAuthenticated", ["loc", [null, [1, 6], [1, 29]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [1, 0], [20, 7]]]]],
+      statements: [["block", "if", [["get", "auth.isLoggedIn", ["loc", [null, [1, 6], [1, 21]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [1, 0], [27, 7]]]]],
       locals: [],
       templates: [child0, child1]
     };
@@ -2400,7 +2813,7 @@ define("wpda-client/templates/components/bs-modal", ["exports"], function (expor
           morphs[1] = dom.createMorphAt(dom.childAt(fragment, [3]), 1, 1);
           return morphs;
         },
-        statements: [["block", "bs-modal-dialog", [], ["close", ["subexpr", "action", ["close"], [], ["loc", [null, [3, 25], [3, 41]]], 0, 0], "fade", ["subexpr", "@mut", [["get", "fade", ["loc", [null, [3, 47], [3, 51]]], 0, 0, 0, 0]], [], [], 0, 0], "in", ["subexpr", "@mut", [["get", "in", ["loc", [null, [3, 55], [3, 57]]], 0, 0, 0, 0]], [], [], 0, 0], "id", ["subexpr", "@mut", [["get", "modalId", ["loc", [null, [3, 61], [3, 68]]], 0, 0, 0, 0]], [], [], 0, 0], "title", ["subexpr", "@mut", [["get", "title", ["loc", [null, [3, 75], [3, 80]]], 0, 0, 0, 0]], [], [], 0, 0], "closeButton", ["subexpr", "@mut", [["get", "closeButton", ["loc", [null, [3, 93], [3, 104]]], 0, 0, 0, 0]], [], [], 0, 0], "keyboard", ["subexpr", "@mut", [["get", "keyboard", ["loc", [null, [3, 114], [3, 122]]], 0, 0, 0, 0]], [], [], 0, 0], "header", ["subexpr", "@mut", [["get", "header", ["loc", [null, [3, 130], [3, 136]]], 0, 0, 0, 0]], [], [], 0, 0], "body", ["subexpr", "@mut", [["get", "body", ["loc", [null, [3, 142], [3, 146]]], 0, 0, 0, 0]], [], [], 0, 0], "footer", ["subexpr", "@mut", [["get", "footer", ["loc", [null, [3, 154], [3, 160]]], 0, 0, 0, 0]], [], [], 0, 0], "size", ["subexpr", "@mut", [["get", "size", ["loc", [null, [3, 166], [3, 170]]], 0, 0, 0, 0]], [], [], 0, 0], "backdropClose", ["subexpr", "@mut", [["get", "backdropClose", ["loc", [null, [3, 185], [3, 198]]], 0, 0, 0, 0]], [], [], 0, 0]], 0, null, ["loc", [null, [3, 0], [5, 20]]]], ["block", "if", [["get", "showBackdrop", ["loc", [null, [8, 6], [8, 18]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [8, 0], [10, 7]]]]],
+        statements: [["block", "bs-modal-dialog", [], ["close", ["subexpr", "action", ["close"], [], ["loc", [null, [3, 25], [3, 41]]], 0, 0], "class", ["subexpr", "@mut", [["get", "class", ["loc", [null, [3, 48], [3, 53]]], 0, 0, 0, 0]], [], [], 0, 0], "fade", ["subexpr", "@mut", [["get", "fade", ["loc", [null, [3, 59], [3, 63]]], 0, 0, 0, 0]], [], [], 0, 0], "in", ["subexpr", "@mut", [["get", "in", ["loc", [null, [3, 67], [3, 69]]], 0, 0, 0, 0]], [], [], 0, 0], "id", ["subexpr", "@mut", [["get", "modalId", ["loc", [null, [3, 73], [3, 80]]], 0, 0, 0, 0]], [], [], 0, 0], "title", ["subexpr", "@mut", [["get", "title", ["loc", [null, [3, 87], [3, 92]]], 0, 0, 0, 0]], [], [], 0, 0], "closeButton", ["subexpr", "@mut", [["get", "closeButton", ["loc", [null, [3, 105], [3, 116]]], 0, 0, 0, 0]], [], [], 0, 0], "keyboard", ["subexpr", "@mut", [["get", "keyboard", ["loc", [null, [3, 126], [3, 134]]], 0, 0, 0, 0]], [], [], 0, 0], "header", ["subexpr", "@mut", [["get", "header", ["loc", [null, [3, 142], [3, 148]]], 0, 0, 0, 0]], [], [], 0, 0], "body", ["subexpr", "@mut", [["get", "body", ["loc", [null, [3, 154], [3, 158]]], 0, 0, 0, 0]], [], [], 0, 0], "footer", ["subexpr", "@mut", [["get", "footer", ["loc", [null, [3, 166], [3, 172]]], 0, 0, 0, 0]], [], [], 0, 0], "size", ["subexpr", "@mut", [["get", "size", ["loc", [null, [3, 178], [3, 182]]], 0, 0, 0, 0]], [], [], 0, 0], "backdropClose", ["subexpr", "@mut", [["get", "backdropClose", ["loc", [null, [3, 197], [3, 210]]], 0, 0, 0, 0]], [], [], 0, 0]], 0, null, ["loc", [null, [3, 0], [5, 20]]]], ["block", "if", [["get", "showBackdrop", ["loc", [null, [8, 6], [8, 18]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [8, 0], [10, 7]]]]],
         locals: [],
         templates: [child0, child1]
       };
@@ -4714,7 +5127,852 @@ define("wpda-client/templates/components/form-element/vertical/textarea", ["expo
     };
   })());
 });
+define("wpda-client/templates/components/nav-bar", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template((function () {
+    var child0 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 4,
+              "column": 7
+            },
+            "end": {
+              "line": 4,
+              "column": 86
+            }
+          },
+          "moduleName": "wpda-client/templates/components/nav-bar.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("Waze Place Discovery & Audit");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes() {
+          return [];
+        },
+        statements: [],
+        locals: [],
+        templates: []
+      };
+    })();
+    var child1 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 14,
+              "column": 5
+            },
+            "end": {
+              "line": 16,
+              "column": 5
+            }
+          },
+          "moduleName": "wpda-client/templates/components/nav-bar.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("						");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("a");
+          dom.setAttribute(el1, "class", "nav-link");
+          var el2 = dom.createElement("span");
+          dom.setAttribute(el2, "class", "glyphicon glyphicon-list");
+          dom.setAttribute(el2, "aria-hidden", "true");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode(" View Places");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var element2 = dom.childAt(fragment, [1]);
+          var morphs = new Array(1);
+          morphs[0] = dom.createElementMorph(element2);
+          return morphs;
+        },
+        statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [15, 26], [15, 56]]], 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })();
+    var child2 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 17,
+              "column": 5
+            },
+            "end": {
+              "line": 19,
+              "column": 5
+            }
+          },
+          "moduleName": "wpda-client/templates/components/nav-bar.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("						");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("a");
+          dom.setAttribute(el1, "class", "nav-link");
+          var el2 = dom.createElement("span");
+          dom.setAttribute(el2, "class", "glyphicon glyphicon-eye-open");
+          dom.setAttribute(el2, "aria-hidden", "true");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode(" Watch a New Place");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var element1 = dom.childAt(fragment, [1]);
+          var morphs = new Array(1);
+          morphs[0] = dom.createElementMorph(element1);
+          return morphs;
+        },
+        statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [18, 26], [18, 56]]], 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })();
+    var child3 = (function () {
+      var child0 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 21,
+                "column": 6
+              },
+              "end": {
+                "line": 23,
+                "column": 6
+              }
+            },
+            "moduleName": "wpda-client/templates/components/nav-bar.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("							");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("a");
+            dom.setAttribute(el1, "class", "nav-link");
+            var el2 = dom.createElement("span");
+            dom.setAttribute(el2, "class", "glyphicon glyphicon-user");
+            dom.setAttribute(el2, "aria-hidden", "true");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode(" View Account");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var element0 = dom.childAt(fragment, [1]);
+            var morphs = new Array(1);
+            morphs[0] = dom.createElementMorph(element0);
+            return morphs;
+          },
+          statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [22, 27], [22, 57]]], 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 20,
+              "column": 5
+            },
+            "end": {
+              "line": 24,
+              "column": 5
+            }
+          },
+          "moduleName": "wpda-client/templates/components/nav-bar.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createComment("");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var morphs = new Array(1);
+          morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
+          dom.insertBoundary(fragment, 0);
+          dom.insertBoundary(fragment, null);
+          return morphs;
+        },
+        statements: [["block", "link-to", ["profile"], ["tagName", "li"], 0, null, ["loc", [null, [21, 6], [23, 18]]]]],
+        locals: [],
+        templates: [child0]
+      };
+    })();
+    return {
+      meta: {
+        "revision": "Ember@2.8.3",
+        "loc": {
+          "source": null,
+          "start": {
+            "line": 1,
+            "column": 0
+          },
+          "end": {
+            "line": 31,
+            "column": 0
+          }
+        },
+        "moduleName": "wpda-client/templates/components/nav-bar.hbs"
+      },
+      isEmpty: false,
+      arity: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      buildFragment: function buildFragment(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createElement("nav");
+        dom.setAttribute(el1, "class", "navbar navbar-default navbar-fixed-top");
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("div");
+        dom.setAttribute(el2, "class", "container");
+        var el3 = dom.createTextNode("\n		");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createElement("div");
+        dom.setAttribute(el3, "class", "navbar-header");
+        var el4 = dom.createTextNode("\n			");
+        dom.appendChild(el3, el4);
+        var el4 = dom.createElement("h1");
+        var el5 = dom.createComment("");
+        dom.appendChild(el4, el5);
+        dom.appendChild(el3, el4);
+        var el4 = dom.createTextNode("\n		");
+        dom.appendChild(el3, el4);
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("\n		");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createElement("div");
+        dom.setAttribute(el3, "class", "navbar-right");
+        var el4 = dom.createTextNode("\n			");
+        dom.appendChild(el3, el4);
+        var el4 = dom.createComment("");
+        dom.appendChild(el3, el4);
+        var el4 = dom.createTextNode("\n		");
+        dom.appendChild(el3, el4);
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("\n\n		");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createElement("div");
+        dom.setAttribute(el3, "class", "row");
+        var el4 = dom.createTextNode("\n			");
+        dom.appendChild(el3, el4);
+        var el4 = dom.createElement("div");
+        dom.setAttribute(el4, "class", "col-sm-12");
+        var el5 = dom.createTextNode("\n				");
+        dom.appendChild(el4, el5);
+        var el5 = dom.createElement("ul");
+        dom.setAttribute(el5, "class", "nav nav-tabs");
+        var el6 = dom.createTextNode("\n					");
+        dom.appendChild(el5, el6);
+        var el6 = dom.createComment(" navigation menu ");
+        dom.appendChild(el5, el6);
+        var el6 = dom.createTextNode("\n");
+        dom.appendChild(el5, el6);
+        var el6 = dom.createComment("");
+        dom.appendChild(el5, el6);
+        var el6 = dom.createComment("");
+        dom.appendChild(el5, el6);
+        var el6 = dom.createComment("");
+        dom.appendChild(el5, el6);
+        var el6 = dom.createTextNode("				");
+        dom.appendChild(el5, el6);
+        dom.appendChild(el4, el5);
+        var el5 = dom.createTextNode("\n			");
+        dom.appendChild(el4, el5);
+        dom.appendChild(el3, el4);
+        var el4 = dom.createTextNode("\n		");
+        dom.appendChild(el3, el4);
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("\n\n	");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n");
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+        var element3 = dom.childAt(fragment, [0, 1]);
+        var element4 = dom.childAt(element3, [5, 1, 1]);
+        var morphs = new Array(5);
+        morphs[0] = dom.createMorphAt(dom.childAt(element3, [1, 1]), 0, 0);
+        morphs[1] = dom.createMorphAt(dom.childAt(element3, [3]), 1, 1);
+        morphs[2] = dom.createMorphAt(element4, 3, 3);
+        morphs[3] = dom.createMorphAt(element4, 4, 4);
+        morphs[4] = dom.createMorphAt(element4, 5, 5);
+        return morphs;
+      },
+      statements: [["block", "link-to", ["application"], ["class", "navbar-brand"], 0, null, ["loc", [null, [4, 7], [4, 98]]]], ["content", "auth-bar", ["loc", [null, [7, 3], [7, 15]]], 0, 0, 0, 0], ["block", "link-to", ["application"], ["tagName", "li"], 1, null, ["loc", [null, [14, 5], [16, 17]]]], ["block", "link-to", ["watch-place"], ["tagName", "li"], 2, null, ["loc", [null, [17, 5], [19, 17]]]], ["block", "if", [["get", "auth.isLoggedIn", ["loc", [null, [20, 11], [20, 26]]], 0, 0, 0, 0]], [], 3, null, ["loc", [null, [20, 5], [24, 12]]]]],
+      locals: [],
+      templates: [child0, child1, child2, child3]
+    };
+  })());
+});
+define("wpda-client/templates/components/page-numbers", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template((function () {
+    var child0 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 3,
+              "column": 4
+            },
+            "end": {
+              "line": 7,
+              "column": 4
+            }
+          },
+          "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("      ");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("li");
+          dom.setAttribute(el1, "class", "arrow prev enabled-arrow");
+          var el2 = dom.createTextNode("\n        ");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("a");
+          dom.setAttribute(el2, "href", "#");
+          var el3 = dom.createTextNode("«");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n      ");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var element4 = dom.childAt(fragment, [1, 1]);
+          var morphs = new Array(1);
+          morphs[0] = dom.createElementMorph(element4);
+          return morphs;
+        },
+        statements: [["element", "action", ["incrementPage", -1], [], ["loc", [null, [5, 20], [5, 49]]], 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })();
+    var child1 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 7,
+              "column": 4
+            },
+            "end": {
+              "line": 11,
+              "column": 4
+            }
+          },
+          "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("      ");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("li");
+          dom.setAttribute(el1, "class", "arrow prev disabled");
+          var el2 = dom.createTextNode("\n        ");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("a");
+          dom.setAttribute(el2, "href", "#");
+          var el3 = dom.createTextNode("«");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n      ");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var element3 = dom.childAt(fragment, [1, 1]);
+          var morphs = new Array(1);
+          morphs[0] = dom.createElementMorph(element3);
+          return morphs;
+        },
+        statements: [["element", "action", ["incrementPage", -1], [], ["loc", [null, [9, 20], [9, 49]]], 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })();
+    var child2 = (function () {
+      var child0 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 14,
+                "column": 6
+              },
+              "end": {
+                "line": 18,
+                "column": 6
+              }
+            },
+            "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("        ");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("li");
+            dom.setAttribute(el1, "class", "dots disabled");
+            var el2 = dom.createTextNode("\n          ");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("span");
+            var el3 = dom.createTextNode("...");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n        ");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes() {
+            return [];
+          },
+          statements: [],
+          locals: [],
+          templates: []
+        };
+      })();
+      var child1 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 19,
+                "column": 6
+              },
+              "end": {
+                "line": 23,
+                "column": 6
+              }
+            },
+            "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("        ");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("li");
+            dom.setAttribute(el1, "class", "active page-number");
+            var el2 = dom.createTextNode("\n          ");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("a");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n        ");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var morphs = new Array(1);
+            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1, 1]), 0, 0);
+            return morphs;
+          },
+          statements: [["content", "item.page", ["loc", [null, [21, 13], [21, 26]]], 0, 0, 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
+      var child2 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 23,
+                "column": 6
+              },
+              "end": {
+                "line": 27,
+                "column": 6
+              }
+            },
+            "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("        ");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("li");
+            dom.setAttribute(el1, "class", "page-number");
+            var el2 = dom.createTextNode("\n          ");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("a");
+            dom.setAttribute(el2, "href", "#");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n        ");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var element2 = dom.childAt(fragment, [1, 1]);
+            var morphs = new Array(2);
+            morphs[0] = dom.createElementMorph(element2);
+            morphs[1] = dom.createMorphAt(element2, 0, 0);
+            return morphs;
+          },
+          statements: [["element", "action", ["pageClicked", ["get", "item.page", ["loc", [null, [25, 45], [25, 54]]], 0, 0, 0, 0]], [], ["loc", [null, [25, 22], [25, 56]]], 0, 0], ["content", "item.page", ["loc", [null, [25, 57], [25, 70]]], 0, 0, 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 13,
+              "column": 4
+            },
+            "end": {
+              "line": 28,
+              "column": 4
+            }
+          },
+          "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+        },
+        isEmpty: false,
+        arity: 1,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createComment("");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createComment("");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var morphs = new Array(2);
+          morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
+          morphs[1] = dom.createMorphAt(fragment, 1, 1, contextualElement);
+          dom.insertBoundary(fragment, 0);
+          dom.insertBoundary(fragment, null);
+          return morphs;
+        },
+        statements: [["block", "if", [["get", "item.dots", ["loc", [null, [14, 12], [14, 21]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [14, 6], [18, 13]]]], ["block", "if", [["get", "item.current", ["loc", [null, [19, 12], [19, 24]]], 0, 0, 0, 0]], [], 1, 2, ["loc", [null, [19, 6], [27, 13]]]]],
+        locals: ["item"],
+        templates: [child0, child1, child2]
+      };
+    })();
+    var child3 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 30,
+              "column": 4
+            },
+            "end": {
+              "line": 34,
+              "column": 4
+            }
+          },
+          "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("      ");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("li");
+          dom.setAttribute(el1, "class", "arrow next enabled-arrow");
+          var el2 = dom.createTextNode("\n        ");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("a");
+          dom.setAttribute(el2, "href", "#");
+          var el3 = dom.createTextNode("»");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n      ");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var element1 = dom.childAt(fragment, [1, 1]);
+          var morphs = new Array(1);
+          morphs[0] = dom.createElementMorph(element1);
+          return morphs;
+        },
+        statements: [["element", "action", ["incrementPage", 1], [], ["loc", [null, [32, 20], [32, 48]]], 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })();
+    var child4 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 34,
+              "column": 4
+            },
+            "end": {
+              "line": 38,
+              "column": 4
+            }
+          },
+          "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("      ");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("li");
+          dom.setAttribute(el1, "class", "arrow next disabled");
+          var el2 = dom.createTextNode("\n        ");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("a");
+          dom.setAttribute(el2, "href", "#");
+          var el3 = dom.createTextNode("»");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n      ");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var element0 = dom.childAt(fragment, [1, 1]);
+          var morphs = new Array(1);
+          morphs[0] = dom.createElementMorph(element0);
+          return morphs;
+        },
+        statements: [["element", "action", ["incrementPage", 1], [], ["loc", [null, [36, 20], [36, 48]]], 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })();
+    return {
+      meta: {
+        "revision": "Ember@2.8.3",
+        "loc": {
+          "source": null,
+          "start": {
+            "line": 1,
+            "column": 0
+          },
+          "end": {
+            "line": 41,
+            "column": 0
+          }
+        },
+        "moduleName": "wpda-client/templates/components/page-numbers.hbs"
+      },
+      isEmpty: false,
+      arity: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      buildFragment: function buildFragment(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createElement("div");
+        dom.setAttribute(el1, "class", "pagination-centered");
+        var el2 = dom.createTextNode("\n  ");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("ul");
+        dom.setAttribute(el2, "class", "pagination");
+        var el3 = dom.createTextNode("\n");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createComment("");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("\n");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createComment("");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("\n");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createComment("");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("  ");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n");
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+        var element5 = dom.childAt(fragment, [0, 1]);
+        var morphs = new Array(3);
+        morphs[0] = dom.createMorphAt(element5, 1, 1);
+        morphs[1] = dom.createMorphAt(element5, 3, 3);
+        morphs[2] = dom.createMorphAt(element5, 5, 5);
+        return morphs;
+      },
+      statements: [["block", "if", [["get", "canStepBackward", ["loc", [null, [3, 10], [3, 25]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [3, 4], [11, 11]]]], ["block", "each", [["get", "pageItems", ["loc", [null, [13, 12], [13, 21]]], 0, 0, 0, 0]], [], 2, null, ["loc", [null, [13, 4], [28, 13]]]], ["block", "if", [["get", "canStepForward", ["loc", [null, [30, 10], [30, 24]]], 0, 0, 0, 0]], [], 3, 4, ["loc", [null, [30, 4], [38, 11]]]]],
+      locals: [],
+      templates: [child0, child1, child2, child3, child4]
+    };
+  })());
+});
 define("wpda-client/templates/components/place-list", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template((function () {
+    return {
+      meta: {
+        "revision": "Ember@2.8.3",
+        "loc": {
+          "source": null,
+          "start": {
+            "line": 1,
+            "column": 0
+          },
+          "end": {
+            "line": 1,
+            "column": 0
+          }
+        },
+        "moduleName": "wpda-client/templates/components/place-list.hbs"
+      },
+      isEmpty: true,
+      arity: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      buildFragment: function buildFragment(dom) {
+        var el0 = dom.createDocumentFragment();
+        return el0;
+      },
+      buildRenderNodes: function buildRenderNodes() {
+        return [];
+      },
+      statements: [],
+      locals: [],
+      templates: []
+    };
+  })());
+});
+define('wpda-client/templates/components/x-select', ['exports', 'emberx-select/templates/components/x-select'], function (exports, _emberxSelectTemplatesComponentsXSelect) {
+  Object.defineProperty(exports, 'default', {
+    enumerable: true,
+    get: function get() {
+      return _emberxSelectTemplatesComponentsXSelect['default'];
+    }
+  });
+});
+define("wpda-client/templates/index", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template((function () {
     var child0 = (function () {
       var child0 = (function () {
@@ -4725,15 +5983,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
               "loc": {
                 "source": null,
                 "start": {
-                  "line": 24,
+                  "line": 23,
                   "column": 12
                 },
                 "end": {
-                  "line": 26,
+                  "line": 25,
                   "column": 12
                 }
               },
-              "moduleName": "wpda-client/templates/components/place-list.hbs"
+              "moduleName": "wpda-client/templates/index.hbs"
             },
             isEmpty: false,
             arity: 0,
@@ -4769,15 +6027,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
               "loc": {
                 "source": null,
                 "start": {
-                  "line": 26,
+                  "line": 25,
                   "column": 12
                 },
                 "end": {
-                  "line": 28,
+                  "line": 27,
                   "column": 12
                 }
               },
-              "moduleName": "wpda-client/templates/components/place-list.hbs"
+              "moduleName": "wpda-client/templates/index.hbs"
             },
             isEmpty: false,
             arity: 0,
@@ -4812,15 +6070,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
               "loc": {
                 "source": null,
                 "start": {
-                  "line": 38,
+                  "line": 37,
                   "column": 12
                 },
                 "end": {
-                  "line": 40,
+                  "line": 39,
                   "column": 12
                 }
               },
-              "moduleName": "wpda-client/templates/components/place-list.hbs"
+              "moduleName": "wpda-client/templates/index.hbs"
             },
             isEmpty: false,
             arity: 0,
@@ -4856,15 +6114,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
               "loc": {
                 "source": null,
                 "start": {
-                  "line": 40,
+                  "line": 39,
                   "column": 12
                 },
                 "end": {
-                  "line": 42,
+                  "line": 41,
                   "column": 12
                 }
               },
-              "moduleName": "wpda-client/templates/components/place-list.hbs"
+              "moduleName": "wpda-client/templates/index.hbs"
             },
             isEmpty: false,
             arity: 0,
@@ -4899,15 +6157,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
               "loc": {
                 "source": null,
                 "start": {
-                  "line": 43,
+                  "line": 42,
                   "column": 12
                 },
                 "end": {
-                  "line": 45,
+                  "line": 44,
                   "column": 12
                 }
               },
-              "moduleName": "wpda-client/templates/components/place-list.hbs"
+              "moduleName": "wpda-client/templates/index.hbs"
             },
             isEmpty: false,
             arity: 0,
@@ -4943,15 +6201,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
               "loc": {
                 "source": null,
                 "start": {
-                  "line": 45,
+                  "line": 44,
                   "column": 12
                 },
                 "end": {
-                  "line": 47,
+                  "line": 46,
                   "column": 12
                 }
               },
-              "moduleName": "wpda-client/templates/components/place-list.hbs"
+              "moduleName": "wpda-client/templates/index.hbs"
             },
             isEmpty: false,
             arity: 0,
@@ -4985,15 +6243,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             "loc": {
               "source": null,
               "start": {
-                "line": 22,
+                "line": 21,
                 "column": 4
               },
               "end": {
-                "line": 49,
+                "line": 48,
                 "column": 4
               }
             },
-            "moduleName": "wpda-client/templates/components/place-list.hbs"
+            "moduleName": "wpda-client/templates/index.hbs"
           },
           isEmpty: false,
           arity: 1,
@@ -5109,7 +6367,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             morphs[14] = dom.createMorphAt(element0, 22, 22);
             return morphs;
           },
-          statements: [["block", "if", [["get", "place.isVerified", ["loc", [null, [24, 18], [24, 34]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [24, 12], [28, 19]]]], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [29, 27], [29, 42]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [29, 67], [29, 81]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [30, 16], [30, 32]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [31, 16], [31, 32]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [32, 16], [32, 30]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [33, 16], [33, 31]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [34, 16], [34, 36]]], 0, 0, 0, 0], ["content", "place.createdBy", ["loc", [null, [35, 16], [35, 35]]], 0, 0, 0, 0], ["content", "place.createdOn", ["loc", [null, [35, 39], [35, 58]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [36, 16], [36, 35]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [36, 39], [36, 58]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [37, 16], [37, 35]]], 0, 0, 0, 0], ["block", "if", [["get", "place.updateRequest", ["loc", [null, [38, 18], [38, 37]]], 0, 0, 0, 0]], [], 2, 3, ["loc", [null, [38, 12], [42, 19]]]], ["block", "if", [["get", "place.isResidential", ["loc", [null, [43, 18], [43, 37]]], 0, 0, 0, 0]], [], 4, 5, ["loc", [null, [43, 12], [47, 19]]]]],
+          statements: [["block", "if", [["get", "place.isVerified", ["loc", [null, [23, 18], [23, 34]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [23, 12], [27, 19]]]], ["attribute", "href", ["concat", [["get", "place.permalink", ["loc", [null, [28, 27], [28, 42]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["content", "place.name", ["loc", [null, [28, 67], [28, 81]]], 0, 0, 0, 0], ["content", "place.number", ["loc", [null, [29, 16], [29, 32]]], 0, 0, 0, 0], ["content", "place.street", ["loc", [null, [30, 16], [30, 32]]], 0, 0, 0, 0], ["content", "place.city", ["loc", [null, [31, 16], [31, 30]]], 0, 0, 0, 0], ["content", "place.state", ["loc", [null, [32, 16], [32, 31]]], 0, 0, 0, 0], ["content", "place.categories", ["loc", [null, [33, 16], [33, 36]]], 0, 0, 0, 0], ["content", "place.createdBy", ["loc", [null, [34, 16], [34, 35]]], 0, 0, 0, 0], ["content", "place.createdOn", ["loc", [null, [34, 39], [34, 58]]], 0, 0, 0, 0], ["content", "place.updatedBy", ["loc", [null, [35, 16], [35, 35]]], 0, 0, 0, 0], ["content", "place.updatedOn", ["loc", [null, [35, 39], [35, 58]]], 0, 0, 0, 0], ["content", "place.lockLevel", ["loc", [null, [36, 16], [36, 35]]], 0, 0, 0, 0], ["block", "if", [["get", "place.updateRequest", ["loc", [null, [37, 18], [37, 37]]], 0, 0, 0, 0]], [], 2, 3, ["loc", [null, [37, 12], [41, 19]]]], ["block", "if", [["get", "place.isResidential", ["loc", [null, [42, 18], [42, 37]]], 0, 0, 0, 0]], [], 4, 5, ["loc", [null, [42, 12], [46, 19]]]]],
           locals: ["place"],
           templates: [child0, child1, child2, child3, child4, child5]
         };
@@ -5120,15 +6378,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
           "loc": {
             "source": null,
             "start": {
-              "line": 3,
+              "line": 2,
               "column": 0
             },
             "end": {
-              "line": 52,
+              "line": 51,
               "column": 0
             }
           },
-          "moduleName": "wpda-client/templates/components/place-list.hbs"
+          "moduleName": "wpda-client/templates/index.hbs"
         },
         isEmpty: false,
         arity: 0,
@@ -5248,7 +6506,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
           morphs[0] = dom.createMorphAt(dom.childAt(fragment, [0, 3]), 1, 1);
           return morphs;
         },
-        statements: [["block", "each", [["get", "model", ["loc", [null, [22, 12], [22, 17]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [22, 4], [49, 13]]]]],
+        statements: [["block", "each", [["get", "model", ["loc", [null, [21, 12], [21, 17]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [21, 4], [48, 13]]]]],
         locals: [],
         templates: [child0]
       };
@@ -5260,15 +6518,15 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
           "loc": {
             "source": null,
             "start": {
-              "line": 52,
+              "line": 51,
               "column": 0
             },
             "end": {
-              "line": 54,
+              "line": 53,
               "column": 0
             }
           },
-          "moduleName": "wpda-client/templates/components/place-list.hbs"
+          "moduleName": "wpda-client/templates/index.hbs"
         },
         isEmpty: false,
         arity: 0,
@@ -5277,7 +6535,7 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
         buildFragment: function buildFragment(dom) {
           var el0 = dom.createDocumentFragment();
           var el1 = dom.createElement("p");
-          var el2 = dom.createTextNode("No places are being watched. Click the button above to watch a new place.");
+          var el2 = dom.createTextNode("No places are being watched. Click the menu item above to watch a new place.");
           dom.appendChild(el1, el2);
           dom.appendChild(el0, el1);
           var el1 = dom.createTextNode("\n");
@@ -5302,11 +6560,11 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
             "column": 0
           },
           "end": {
-            "line": 55,
+            "line": 54,
             "column": 0
           }
         },
-        "moduleName": "wpda-client/templates/components/place-list.hbs"
+        "moduleName": "wpda-client/templates/index.hbs"
       },
       isEmpty: false,
       arity: 0,
@@ -5320,27 +6578,140 @@ define("wpda-client/templates/components/place-list", ["exports"], function (exp
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n");
         dom.appendChild(el0, el1);
-        var el1 = dom.createElement("button");
-        dom.setAttribute(el1, "type", "button");
-        dom.setAttribute(el1, "class", "btn btn-default");
-        var el2 = dom.createTextNode("Watch a New Place");
-        dom.appendChild(el1, el2);
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n");
-        dom.appendChild(el0, el1);
         var el1 = dom.createComment("");
         dom.appendChild(el0, el1);
         return el0;
       },
       buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
         var morphs = new Array(1);
-        morphs[0] = dom.createMorphAt(fragment, 4, 4, contextualElement);
+        morphs[0] = dom.createMorphAt(fragment, 2, 2, contextualElement);
         dom.insertBoundary(fragment, null);
         return morphs;
       },
-      statements: [["block", "if", [["get", "model.length", ["loc", [null, [3, 6], [3, 18]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [3, 0], [54, 7]]]]],
+      statements: [["block", "if", [["get", "model.length", ["loc", [null, [2, 6], [2, 18]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [2, 0], [53, 7]]]]],
       locals: [],
       templates: [child0, child1]
+    };
+  })());
+});
+define("wpda-client/templates/login", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template((function () {
+    var child0 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 7,
+              "column": 1
+            },
+            "end": {
+              "line": 9,
+              "column": 1
+            }
+          },
+          "moduleName": "wpda-client/templates/login.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("		");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("p");
+          var el2 = dom.createComment("");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var morphs = new Array(1);
+          morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 0, 0);
+          return morphs;
+        },
+        statements: [["content", "errorMessage", ["loc", [null, [8, 5], [8, 21]]], 0, 0, 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })();
+    return {
+      meta: {
+        "revision": "Ember@2.8.3",
+        "loc": {
+          "source": null,
+          "start": {
+            "line": 1,
+            "column": 0
+          },
+          "end": {
+            "line": 11,
+            "column": 0
+          }
+        },
+        "moduleName": "wpda-client/templates/login.hbs"
+      },
+      isEmpty: false,
+      arity: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      buildFragment: function buildFragment(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createElement("form");
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("label");
+        dom.setAttribute(el2, "for", "identification");
+        var el3 = dom.createTextNode("Username");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createComment("");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("label");
+        dom.setAttribute(el2, "for", "password");
+        var el3 = dom.createTextNode("Password");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createComment("");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n	");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("button");
+        dom.setAttribute(el2, "type", "submit");
+        var el3 = dom.createTextNode("Login");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createComment("");
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+        var element0 = dom.childAt(fragment, [0]);
+        var morphs = new Array(4);
+        morphs[0] = dom.createElementMorph(element0);
+        morphs[1] = dom.createMorphAt(element0, 3, 3);
+        morphs[2] = dom.createMorphAt(element0, 7, 7);
+        morphs[3] = dom.createMorphAt(element0, 11, 11);
+        return morphs;
+      },
+      statements: [["element", "action", ["authenticate"], ["on", "submit"], ["loc", [null, [1, 6], [1, 43]]], 0, 0], ["inline", "input", [], ["id", "identification", "placeholder", "Enter Login", "value", ["subexpr", "@mut", [["get", "identification", ["loc", [null, [3, 61], [3, 75]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [3, 1], [3, 77]]], 0, 0], ["inline", "input", [], ["id", "password", "placeholder", "Enter Password", "type", "password", "value", ["subexpr", "@mut", [["get", "password", ["loc", [null, [5, 74], [5, 82]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [5, 1], [5, 84]]], 0, 0], ["block", "if", [["get", "errorMessage", ["loc", [null, [7, 7], [7, 19]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [7, 1], [9, 8]]]]],
+      locals: [],
+      templates: [child0]
     };
   })());
 });
@@ -5368,7 +6739,888 @@ define("wpda-client/templates/profile", ["exports"], function (exports) {
       hasRendered: false,
       buildFragment: function buildFragment(dom) {
         var el0 = dom.createDocumentFragment();
-        var el1 = dom.createTextNode("Hello, user!\n");
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+        var morphs = new Array(1);
+        morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
+        dom.insertBoundary(fragment, 0);
+        return morphs;
+      },
+      statements: [["content", "outlet", ["loc", [null, [1, 0], [1, 10]]], 0, 0, 0, 0]],
+      locals: [],
+      templates: []
+    };
+  })());
+});
+define("wpda-client/templates/register", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template((function () {
+    var child0 = (function () {
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end": {
+              "line": 3,
+              "column": 0
+            }
+          },
+          "moduleName": "wpda-client/templates/register.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("	");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("h1");
+          var el2 = dom.createTextNode("Welcome ");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createComment("");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("!");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var morphs = new Array(1);
+          morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 1, 1);
+          return morphs;
+        },
+        statements: [["content", "content.user.username", ["loc", [null, [2, 13], [2, 38]]], 0, 0, 0, 0]],
+        locals: [],
+        templates: []
+      };
+    })();
+    var child1 = (function () {
+      var child0 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 12,
+                "column": 5
+              },
+              "end": {
+                "line": 16,
+                "column": 5
+              }
+            },
+            "moduleName": "wpda-client/templates/register.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("						");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("div");
+            dom.setAttribute(el1, "class", "col-sm-5");
+            var el2 = dom.createTextNode("\n							");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("p");
+            dom.setAttribute(el2, "class", "reg-label");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n						");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var morphs = new Array(1);
+            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1, 1]), 0, 0);
+            return morphs;
+          },
+          statements: [["content", "usernameerror", ["loc", [null, [14, 28], [14, 45]]], 0, 0, 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
+      var child1 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 23,
+                "column": 5
+              },
+              "end": {
+                "line": 27,
+                "column": 5
+              }
+            },
+            "moduleName": "wpda-client/templates/register.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("						");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("div");
+            dom.setAttribute(el1, "class", "col-sm-5");
+            var el2 = dom.createTextNode("\n							");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("p");
+            dom.setAttribute(el2, "class", "reg-label");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n						");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var morphs = new Array(1);
+            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1, 1]), 0, 0);
+            return morphs;
+          },
+          statements: [["content", "emailerror", ["loc", [null, [25, 28], [25, 42]]], 0, 0, 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
+      var child2 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 34,
+                "column": 5
+              },
+              "end": {
+                "line": 38,
+                "column": 5
+              }
+            },
+            "moduleName": "wpda-client/templates/register.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("						");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("div");
+            dom.setAttribute(el1, "class", "col-sm-5");
+            var el2 = dom.createTextNode("\n							");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createElement("p");
+            dom.setAttribute(el2, "class", "reg-label");
+            var el3 = dom.createComment("");
+            dom.appendChild(el2, el3);
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n						");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var morphs = new Array(1);
+            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1, 1]), 0, 0);
+            return morphs;
+          },
+          statements: [["content", "passworderror", ["loc", [null, [36, 28], [36, 45]]], 0, 0, 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
+      var child3 = (function () {
+        var child0 = (function () {
+          return {
+            meta: {
+              "revision": "Ember@2.8.3",
+              "loc": {
+                "source": null,
+                "start": {
+                  "line": 57,
+                  "column": 7
+                },
+                "end": {
+                  "line": 57,
+                  "column": 60
+                }
+              },
+              "moduleName": "wpda-client/templates/register.hbs"
+            },
+            isEmpty: false,
+            arity: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            buildFragment: function buildFragment(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("Select rank");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            buildRenderNodes: function buildRenderNodes() {
+              return [];
+            },
+            statements: [],
+            locals: [],
+            templates: []
+          };
+        })();
+        var child1 = (function () {
+          var child0 = (function () {
+            return {
+              meta: {
+                "revision": "Ember@2.8.3",
+                "loc": {
+                  "source": null,
+                  "start": {
+                    "line": 59,
+                    "column": 8
+                  },
+                  "end": {
+                    "line": 59,
+                    "column": 35
+                  }
+                },
+                "moduleName": "wpda-client/templates/register.hbs"
+              },
+              isEmpty: false,
+              arity: 0,
+              cachedFragment: null,
+              hasRendered: false,
+              buildFragment: function buildFragment(dom) {
+                var el0 = dom.createDocumentFragment();
+                var el1 = dom.createComment("");
+                dom.appendChild(el0, el1);
+                return el0;
+              },
+              buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+                var morphs = new Array(1);
+                morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
+                dom.insertBoundary(fragment, 0);
+                dom.insertBoundary(fragment, null);
+                return morphs;
+              },
+              statements: [["content", "r", ["loc", [null, [59, 30], [59, 35]]], 0, 0, 0, 0]],
+              locals: [],
+              templates: []
+            };
+          })();
+          return {
+            meta: {
+              "revision": "Ember@2.8.3",
+              "loc": {
+                "source": null,
+                "start": {
+                  "line": 58,
+                  "column": 7
+                },
+                "end": {
+                  "line": 61,
+                  "column": 7
+                }
+              },
+              "moduleName": "wpda-client/templates/register.hbs"
+            },
+            isEmpty: false,
+            arity: 1,
+            cachedFragment: null,
+            hasRendered: false,
+            buildFragment: function buildFragment(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("								");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createComment("");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n\n");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+              var morphs = new Array(1);
+              morphs[0] = dom.createMorphAt(fragment, 1, 1, contextualElement);
+              return morphs;
+            },
+            statements: [["block", "xs.option", [], ["value", ["subexpr", "@mut", [["get", "r", ["loc", [null, [59, 27], [59, 28]]], 0, 0, 0, 0]], [], [], 0, 0]], 0, null, ["loc", [null, [59, 8], [59, 49]]]]],
+            locals: ["r"],
+            templates: [child0]
+          };
+        })();
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 56,
+                "column": 6
+              },
+              "end": {
+                "line": 62,
+                "column": 6
+              }
+            },
+            "moduleName": "wpda-client/templates/register.hbs"
+          },
+          isEmpty: false,
+          arity: 1,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("							");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createComment("");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createComment("");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var morphs = new Array(2);
+            morphs[0] = dom.createMorphAt(fragment, 1, 1, contextualElement);
+            morphs[1] = dom.createMorphAt(fragment, 3, 3, contextualElement);
+            dom.insertBoundary(fragment, null);
+            return morphs;
+          },
+          statements: [["block", "xs.option", [], ["disabled", true, "selected", true], 0, null, ["loc", [null, [57, 7], [57, 74]]]], ["block", "each", [["get", "rank", ["loc", [null, [58, 15], [58, 19]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [58, 7], [61, 16]]]]],
+          locals: ["xs"],
+          templates: [child0, child1]
+        };
+      })();
+      var child4 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 70,
+                "column": 6
+              },
+              "end": {
+                "line": 72,
+                "column": 6
+              }
+            },
+            "moduleName": "wpda-client/templates/register.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("							");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("p");
+            var el2 = dom.createTextNode("Your personal data is safe.");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes() {
+            return [];
+          },
+          statements: [],
+          locals: [],
+          templates: []
+        };
+      })();
+      var child5 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 85,
+                "column": 5
+              },
+              "end": {
+                "line": 90,
+                "column": 5
+              }
+            },
+            "moduleName": "wpda-client/templates/register.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("						");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("div");
+            dom.setAttribute(el1, "class", "col-sm-7 alert alert-error fade in");
+            var el2 = dom.createTextNode("\n							");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createComment("");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("\n\n						");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var morphs = new Array(1);
+            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 1, 1);
+            return morphs;
+          },
+          statements: [["content", "validationErrorMsg", ["loc", [null, [87, 7], [87, 29]]], 0, 0, 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
+      return {
+        meta: {
+          "revision": "Ember@2.8.3",
+          "loc": {
+            "source": null,
+            "start": {
+              "line": 3,
+              "column": 0
+            },
+            "end": {
+              "line": 95,
+              "column": 0
+            }
+          },
+          "moduleName": "wpda-client/templates/register.hbs"
+        },
+        isEmpty: false,
+        arity: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        buildFragment: function buildFragment(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("	");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("div");
+          dom.setAttribute(el1, "class", "row");
+          var el2 = dom.createTextNode("\n		");
+          dom.appendChild(el1, el2);
+          var el2 = dom.createElement("div");
+          dom.setAttribute(el2, "class", "col-xs-12");
+          dom.setAttribute(el2, "style", "margin-left: 15px;");
+          var el3 = dom.createTextNode("\n			");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createElement("form");
+          dom.setAttribute(el3, "class", "form-inline");
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-3");
+          var el6 = dom.createElement("p");
+          dom.setAttribute(el6, "class", "pull-right reg-label");
+          var el7 = dom.createElement("b");
+          var el8 = dom.createTextNode("Username:");
+          dom.appendChild(el7, el8);
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-4");
+          var el6 = dom.createTextNode("\n						");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createComment("");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n					");
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createComment("");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-3");
+          var el6 = dom.createElement("p");
+          dom.setAttribute(el6, "class", "pull-right reg-label");
+          var el7 = dom.createElement("b");
+          var el8 = dom.createTextNode("Email:");
+          dom.appendChild(el7, el8);
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          var el6 = dom.createTextNode("\n						");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createComment("");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n					");
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createComment("");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-3");
+          var el6 = dom.createElement("p");
+          dom.setAttribute(el6, "class", "pull-right reg-label");
+          var el7 = dom.createElement("b");
+          var el8 = dom.createTextNode("Password:");
+          dom.appendChild(el7, el8);
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          var el6 = dom.createTextNode("\n						");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createComment("");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n					");
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createComment("");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-3");
+          var el6 = dom.createElement("p");
+          dom.setAttribute(el6, "class", "pull-right reg-label");
+          var el7 = dom.createElement("b");
+          var el8 = dom.createTextNode("Confirm Password:");
+          dom.appendChild(el7, el8);
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-4");
+          var el6 = dom.createTextNode("\n						");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createComment("");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n					");
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-3");
+          var el6 = dom.createElement("p");
+          dom.setAttribute(el6, "class", "pull-right reg-label");
+          var el7 = dom.createElement("b");
+          var el8 = dom.createTextNode("Waze Name:");
+          dom.appendChild(el7, el8);
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-4");
+          var el6 = dom.createTextNode("\n						");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createComment("");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n					");
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-3");
+          var el6 = dom.createElement("p");
+          dom.setAttribute(el6, "class", "pull-right reg-label");
+          var el7 = dom.createElement("b");
+          var el8 = dom.createTextNode("Waze Rank:");
+          dom.appendChild(el7, el8);
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-4");
+          var el6 = dom.createTextNode("\n\n");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createComment("");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n\n					");
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n\n				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-10");
+          var el6 = dom.createTextNode("\n");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createComment("");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("						");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createElement("button");
+          dom.setAttribute(el6, "class", "btn btn-block btn-warning");
+          dom.setAttribute(el6, "type", "button");
+          var el7 = dom.createTextNode("Read Privacy and informed consent policy");
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n						");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createElement("p");
+          dom.setAttribute(el6, "class", "pull-right reg-label");
+          var el7 = dom.createTextNode("\n							");
+          dom.appendChild(el6, el7);
+          var el7 = dom.createComment("");
+          dom.appendChild(el6, el7);
+          var el7 = dom.createTextNode(" I have read and agree to the privacy policy.\n						");
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n					");
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n					");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createElement("div");
+          dom.setAttribute(el5, "class", "col-sm-3 offset3");
+          var el6 = dom.createTextNode("\n						");
+          dom.appendChild(el5, el6);
+          var el6 = dom.createElement("button");
+          dom.setAttribute(el6, "type", "button");
+          dom.setAttribute(el6, "class", "btn btn-block btn-default");
+          var el7 = dom.createTextNode("Sign Up for democlient");
+          dom.appendChild(el6, el7);
+          dom.appendChild(el5, el6);
+          var el6 = dom.createTextNode("\n					");
+          dom.appendChild(el5, el6);
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("\n				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n				");
+          dom.appendChild(el3, el4);
+          var el4 = dom.createElement("div");
+          dom.setAttribute(el4, "class", "row");
+          var el5 = dom.createTextNode("\n");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createComment("");
+          dom.appendChild(el4, el5);
+          var el5 = dom.createTextNode("				");
+          dom.appendChild(el4, el5);
+          dom.appendChild(el3, el4);
+          var el4 = dom.createTextNode("\n			");
+          dom.appendChild(el3, el4);
+          dom.appendChild(el2, el3);
+          var el3 = dom.createTextNode("\n		");
+          dom.appendChild(el2, el3);
+          dom.appendChild(el1, el2);
+          var el2 = dom.createTextNode("\n	");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createComment("/.row");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+          var element0 = dom.childAt(fragment, [1, 1, 1]);
+          var element1 = dom.childAt(element0, [1]);
+          var element2 = dom.childAt(element0, [3]);
+          var element3 = dom.childAt(element2, [3]);
+          var element4 = dom.childAt(element0, [5]);
+          var element5 = dom.childAt(element4, [3]);
+          var element6 = dom.childAt(element0, [13, 1]);
+          var element7 = dom.childAt(element6, [3]);
+          var element8 = dom.childAt(element0, [15, 1, 1]);
+          var morphs = new Array(16);
+          morphs[0] = dom.createMorphAt(dom.childAt(element1, [3]), 1, 1);
+          morphs[1] = dom.createMorphAt(element1, 5, 5);
+          morphs[2] = dom.createAttrMorph(element3, 'class');
+          morphs[3] = dom.createMorphAt(element3, 1, 1);
+          morphs[4] = dom.createMorphAt(element2, 5, 5);
+          morphs[5] = dom.createAttrMorph(element5, 'class');
+          morphs[6] = dom.createMorphAt(element5, 1, 1);
+          morphs[7] = dom.createMorphAt(element4, 5, 5);
+          morphs[8] = dom.createMorphAt(dom.childAt(element0, [7, 3]), 1, 1);
+          morphs[9] = dom.createMorphAt(dom.childAt(element0, [9, 3]), 1, 1);
+          morphs[10] = dom.createMorphAt(dom.childAt(element0, [11, 3]), 1, 1);
+          morphs[11] = dom.createMorphAt(element6, 1, 1);
+          morphs[12] = dom.createElementMorph(element7);
+          morphs[13] = dom.createMorphAt(dom.childAt(element6, [5]), 1, 1);
+          morphs[14] = dom.createElementMorph(element8);
+          morphs[15] = dom.createMorphAt(dom.childAt(element0, [17]), 1, 1);
+          return morphs;
+        },
+        statements: [["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.username", ["loc", [null, [10, 32], [10, 53]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Username"], ["loc", [null, [10, 6], [10, 132]]], 0, 0], ["block", "if", [["get", "usernameerror", ["loc", [null, [12, 11], [12, 24]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [12, 5], [16, 12]]]], ["attribute", "class", ["concat", ["col-sm-4 ", ["get", "emailclasses", ["loc", [null, [20, 28], [20, 40]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.email", ["loc", [null, [21, 32], [21, 50]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Email"], ["loc", [null, [21, 6], [21, 126]]], 0, 0], ["block", "if", [["get", "emailerror", ["loc", [null, [23, 11], [23, 21]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [23, 5], [27, 12]]]], ["attribute", "class", ["concat", ["col-sm-4 ", ["get", "passwordclasses", ["loc", [null, [31, 28], [31, 43]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.password", ["loc", [null, [32, 32], [32, 53]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Password", "type", "password"], ["loc", [null, [32, 6], [32, 148]]], 0, 0], ["block", "if", [["get", "passworderror", ["loc", [null, [34, 11], [34, 24]]], 0, 0, 0, 0]], [], 2, null, ["loc", [null, [34, 5], [38, 12]]]], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "confirmpassword", ["loc", [null, [43, 32], [43, 47]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Confirm password", "type", "password"], ["loc", [null, [43, 6], [43, 150]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.profile.wazeName", ["loc", [null, [49, 32], [49, 56]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Waze username"], ["loc", [null, [49, 6], [49, 140]]], 0, 0], ["block", "x-select", [], ["class", "form-control reg-input-field", "value", ["subexpr", "@mut", [["get", "content.profile.wazeRank", ["loc", [null, [56, 61], [56, 85]]], 0, 0, 0, 0]], [], [], 0, 0]], 3, null, ["loc", [null, [56, 6], [62, 19]]]], ["block", "bs-modal", [], ["open", ["subexpr", "@mut", [["get", "showPolicy", ["loc", [null, [70, 23], [70, 33]]], 0, 0, 0, 0]], [], [], 0, 0], "title", "Privacy Policy", "footer", false], 4, null, ["loc", [null, [70, 6], [72, 19]]]], ["element", "action", ["showPolicy"], [], ["loc", [null, [73, 62], [73, 85]]], 0, 0], ["inline", "input", [], ["type", "checkbox", "name", "doesAgree", "checked", ["subexpr", "@mut", [["get", "agree", ["loc", [null, [75, 56], [75, 61]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [75, 7], [75, 63]]], 0, 0], ["element", "action", ["register"], [], ["loc", [null, [81, 62], [81, 83]]], 0, 0], ["block", "if", [["get", "validationErrorMsg", ["loc", [null, [85, 11], [85, 29]]], 0, 0, 0, 0]], [], 5, null, ["loc", [null, [85, 5], [90, 12]]]]],
+        locals: [],
+        templates: [child0, child1, child2, child3, child4, child5]
+      };
+    })();
+    return {
+      meta: {
+        "revision": "Ember@2.8.3",
+        "loc": {
+          "source": null,
+          "start": {
+            "line": 1,
+            "column": 0
+          },
+          "end": {
+            "line": 96,
+            "column": 0
+          }
+        },
+        "moduleName": "wpda-client/templates/register.hbs"
+      },
+      isEmpty: false,
+      arity: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      buildFragment: function buildFragment(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+        var morphs = new Array(1);
+        morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
+        dom.insertBoundary(fragment, 0);
+        dom.insertBoundary(fragment, null);
+        return morphs;
+      },
+      statements: [["block", "if", [["get", "success", ["loc", [null, [1, 6], [1, 13]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [1, 0], [95, 7]]]]],
+      locals: [],
+      templates: [child0, child1]
+    };
+  })());
+});
+define("wpda-client/templates/watch-place", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template((function () {
+    return {
+      meta: {
+        "revision": "Ember@2.8.3",
+        "loc": {
+          "source": null,
+          "start": {
+            "line": 1,
+            "column": 0
+          },
+          "end": {
+            "line": 2,
+            "column": 0
+          }
+        },
+        "moduleName": "wpda-client/templates/watch-place.hbs"
+      },
+      isEmpty: false,
+      arity: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      buildFragment: function buildFragment(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createElement("h2");
+        var el2 = dom.createTextNode("Watch a New Place");
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
         dom.appendChild(el0, el1);
         return el0;
       },
@@ -5380,6 +7632,44 @@ define("wpda-client/templates/profile", ["exports"], function (exports) {
       templates: []
     };
   })());
+});
+define('wpda-client/transforms/array', ['exports', 'ember-data', 'ember'], function (exports, _emberData, _ember) {
+	exports['default'] = _emberData['default'].Transform.extend({
+		deserialize: function deserialize(serialized) {
+			return _ember['default'].typeOf(serialized) === "array" ? serialized : [];
+		},
+
+		serialize: function serialize(deserialized) {
+			var type = _ember['default'].typeOf(deserialized);
+			if (type === 'array') {
+				return deserialized;
+			} else if (type === 'string') {
+				return deserialized.split(',').map(function (item) {
+					return _ember['default'].$.trim(item);
+				});
+			} else {
+				return [];
+			}
+		}
+	});
+});
+define('wpda-client/transforms/object', ['exports', 'ember-data', 'ember'], function (exports, _emberData, _ember) {
+	exports['default'] = _emberData['default'].Transform.extend({
+		deserialize: function deserialize(value) {
+			if (!_ember['default'].$.isPlainObject(value)) {
+				return {};
+			} else {
+				return value;
+			}
+		},
+		serialize: function serialize(value) {
+			if (!_ember['default'].$.isPlainObject(value)) {
+				return {};
+			} else {
+				return value;
+			}
+		}
+	});
 });
 /* jshint ignore:start */
 
@@ -5417,7 +7707,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+4c4b395f"});
+  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+ee34903b"});
 }
 
 /* jshint ignore:end */

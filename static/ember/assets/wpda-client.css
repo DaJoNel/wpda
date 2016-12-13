@@ -1,5 +1,27 @@
 body {
-	padding-top: 65px;
+	padding-top: 120px;
+}
+
+.app-nav {
+	min-height: 120px;
+	border-bottom: 1px solid #dddddd;
+}
+
+.nav-tabs {
+	border-bottom: none;
+}
+
+.nav-link {
+	cursor: pointer;
+}
+
+.info-icon {
+	cursor: pointer;
+	font-size: 85%;
+}
+
+.info-icon:hover {
+	text-decoration: none;
 }
 
 .auth-form {
@@ -8,8 +30,21 @@ body {
 
 .auth-field {
 	width: 150px !important;
+	margin: 0 2px;
 }
 
 .control-label {
-	margin-left: 4px;
+	margin: 0 2px;
+}
+
+.no-account {
+	margin-top: 4px;
+}
+
+.reg-input-field {
+	width: 100% !important;
+}
+
+.reg-label {
+	margin-top: 5px;
 }
