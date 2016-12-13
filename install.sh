@@ -66,10 +66,12 @@ bower install
 sudo npm install
 ember build -o /var/www/wpda-server/static/ember/
 
-# Make model migrations for Django
+# Make model migrations and setup Django
 cd /var/www/wpda-server/
+python manage.py collectstatic --noinput
+python manage.py flush --noinput
 python manage.py makemigrations
-python manage.py migrate
+python manage.py migrate --run-syncdb
 
 # Download some Waze Place data (e.g. Hy-Vee; note the use of regex)
 python manage.py scrape "hy[ -]?vee"
