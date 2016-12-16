@@ -32,3 +32,9 @@ These commands are used to build the WPDA client application. NOTE: An initial b
 
 2. Navigate to that IP address in a web browser of your choice on the host machine.  
     *Or, if using a GUI version of Ubuntu for the server, navigate to* `localhost` *on the virtual machine.*
+
+## Known Issues
+
+1. Users must be created using `python manage.py createsuperuser` because client-side user registration fails.
+
+2. The "Watch a New Place" function does nothing because I cannot figure out how to make Ember run the script.
