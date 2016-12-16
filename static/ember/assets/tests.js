@@ -178,6 +178,15 @@ define('wpda-client/tests/initializers/auth-manager.jshint', ['exports'], functi
     assert.ok(true, 'initializers/auth-manager.js should pass jshint.');
   });
 });
+define('wpda-client/tests/initializers/constants.jshint', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('JSHint | initializers/constants.js');
+  QUnit.test('should pass jshint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'initializers/constants.js should pass jshint.');
+  });
+});
 define('wpda-client/tests/integration/components/auth-bar-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
 
   (0, _emberQunit.moduleForComponent)('auth-bar', 'Integration | Component | auth bar', {
@@ -848,6 +857,15 @@ define('wpda-client/tests/services/auth-manager.jshint', ['exports'], function (
     assert.ok(true, 'services/auth-manager.js should pass jshint.');
   });
 });
+define('wpda-client/tests/services/constants.jshint', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('JSHint | services/constants.js');
+  QUnit.test('should pass jshint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'services/constants.js should pass jshint.');
+  });
+});
 define('wpda-client/tests/test-helper', ['exports', 'wpda-client/tests/helpers/resolver', 'ember-qunit'], function (exports, _wpdaClientTestsHelpersResolver, _emberQunit) {
 
   (0, _emberQunit.setResolver)(_wpdaClientTestsHelpersResolver['default']);
@@ -954,6 +972,39 @@ define('wpda-client/tests/unit/initializers/auth-manager-test.jshint', ['exports
   QUnit.test('should pass jshint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'unit/initializers/auth-manager-test.js should pass jshint.');
+  });
+});
+define('wpda-client/tests/unit/initializers/constants-test', ['exports', 'ember', 'wpda-client/initializers/constants', 'qunit', 'wpda-client/tests/helpers/destroy-app'], function (exports, _ember, _wpdaClientInitializersConstants, _qunit, _wpdaClientTestsHelpersDestroyApp) {
+
+  (0, _qunit.module)('Unit | Initializer | constants', {
+    beforeEach: function beforeEach() {
+      var _this = this;
+
+      _ember['default'].run(function () {
+        _this.application = _ember['default'].Application.create();
+        _this.application.deferReadiness();
+      });
+    },
+    afterEach: function afterEach() {
+      (0, _wpdaClientTestsHelpersDestroyApp['default'])(this.application);
+    }
+  });
+
+  // Replace this with your real tests.
+  (0, _qunit.test)('it works', function (assert) {
+    (0, _wpdaClientInitializersConstants.initialize)(this.application);
+
+    // you would normally confirm the results of the initializer here
+    assert.ok(true);
+  });
+});
+define('wpda-client/tests/unit/initializers/constants-test.jshint', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('JSHint | unit/initializers/constants-test.js');
+  QUnit.test('should pass jshint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'unit/initializers/constants-test.js should pass jshint.');
   });
 });
 define('wpda-client/tests/unit/models/place-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
@@ -1128,6 +1179,28 @@ define('wpda-client/tests/unit/services/auth-manager-test.jshint', ['exports'], 
   QUnit.test('should pass jshint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'unit/services/auth-manager-test.js should pass jshint.');
+  });
+});
+define('wpda-client/tests/unit/services/constants-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
+
+  (0, _emberQunit.moduleFor)('service:constants', 'Unit | Service | constants', {
+    // Specify the other units that are required for this test.
+    // needs: ['service:foo']
+  });
+
+  // Replace this with your real tests.
+  (0, _emberQunit.test)('it exists', function (assert) {
+    var service = this.subject();
+    assert.ok(service);
+  });
+});
+define('wpda-client/tests/unit/services/constants-test.jshint', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('JSHint | unit/services/constants-test.js');
+  QUnit.test('should pass jshint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'unit/services/constants-test.js should pass jshint.');
   });
 });
 define('wpda-client/tests/unit/transforms/array-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {

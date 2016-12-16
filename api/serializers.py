@@ -1,6 +1,9 @@
 from rest_framework_json_api import serializers
 from rest_framework_json_api.relations import *
 
+from django.core.validators import *
+from django.core.exceptions import ValidationError
+
 from django.contrib.auth.models import *
 from models import *
 
@@ -9,10 +12,18 @@ class UserSerializer(serializers.ModelSerializer):
 		model = User
 		fields = ('id', 'username', 'email', 'password')
 
+	def validateEmail(email):
+		try:
+			validate_email(email)
+			return True
+		except ValidationError:
+			return False
+
 class ProfileSerializer(serializers.ModelSerializer):
 	user = UserSerializer(read_only=True)
 	class Meta:
 		model = Profile
+		fields = ('id', 'user', 'wazeName', 'wazeLevel')
 
 class PlaceSerializer(serializers.ModelSerializer):
 	class Meta:

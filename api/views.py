@@ -28,6 +28,7 @@ class Register(APIView):
 		# Login
 		username = request.POST.get('username')
 		password = request.POST.get('password')
+		email = request.POST.get('email')
 		wazeName = request.POST.get('wazeName')
 		wazeLevel = request.POST.get('wazeLevel')
 

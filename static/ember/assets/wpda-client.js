@@ -604,6 +604,20 @@ define('wpda-client/initializers/bootstrap-linkto', ['exports', 'ember-bootstrap
     }
   });
 });
+define('wpda-client/initializers/constants', ['exports'], function (exports) {
+	exports.initialize = initialize;
+
+	function initialize(application) {
+		application.inject('route', 'constants', 'service:constants');
+		application.inject('controller', 'constants', 'service:constants');
+		application.inject('model', 'constants', 'service:constants');
+	}
+
+	exports['default'] = {
+		name: 'constants',
+		initialize: initialize
+	};
+});
 define('wpda-client/initializers/container-debug-adapter', ['exports', 'ember-resolver/container-debug-adapter'], function (exports, _emberResolverContainerDebugAdapter) {
   exports['default'] = {
     name: 'container-debug-adapter',
@@ -843,14 +857,14 @@ define('wpda-client/router', ['exports', 'ember', 'wpda-client/config/environmen
     exports['default'] = Router;
 });
 define('wpda-client/routes/application', ['exports', 'ember'], function (exports, _ember) {
-	exports['default'] = _ember['default'].Route.extend({
-		model: function model() {
-			return this.store.findAll('place');
-		}
-	});
+  exports['default'] = _ember['default'].Route.extend({});
 });
 define('wpda-client/routes/index', ['exports', 'ember'], function (exports, _ember) {
-  exports['default'] = _ember['default'].Route.extend({});
+				exports['default'] = _ember['default'].Route.extend({
+								model: function model() {
+												return this.store.findAll('place');
+								}
+				});
 });
 define('wpda-client/routes/profile', ['exports', 'ember'], function (exports, _ember) {
   exports['default'] = _ember['default'].Route.extend({});
@@ -985,6 +999,12 @@ define('wpda-client/services/auth-manager', ['exports', 'ember'], function (expo
 				}
 			});
 		}
+	});
+});
+define('wpda-client/services/constants', ['exports', 'ember'], function (exports, _ember) {
+	exports['default'] = _ember['default'].Service.extend({
+		debug: false,
+		wazeRank: ['1', '2', '3', '4', '5', '6', '7']
 	});
 });
 define("wpda-client/templates/application", ["exports"], function (exports) {
@@ -1136,59 +1156,11 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
             "loc": {
               "source": null,
               "start": {
-                "line": 8,
-                "column": 1
-              },
-              "end": {
-                "line": 12,
-                "column": 1
-              }
-            },
-            "moduleName": "wpda-client/templates/components/auth-bar.hbs"
-          },
-          isEmpty: false,
-          arity: 0,
-          cachedFragment: null,
-          hasRendered: false,
-          buildFragment: function buildFragment(dom) {
-            var el0 = dom.createDocumentFragment();
-            var el1 = dom.createTextNode("		");
-            dom.appendChild(el0, el1);
-            var el1 = dom.createElement("div");
-            dom.setAttribute(el1, "class", "auth-error alert");
-            var el2 = dom.createTextNode("\n			");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createComment("");
-            dom.appendChild(el1, el2);
-            var el2 = dom.createTextNode("\n		");
-            dom.appendChild(el1, el2);
-            dom.appendChild(el0, el1);
-            var el1 = dom.createTextNode("\n");
-            dom.appendChild(el0, el1);
-            return el0;
-          },
-          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-            var morphs = new Array(1);
-            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 1, 1);
-            return morphs;
-          },
-          statements: [["content", "auth.errorMsg", ["loc", [null, [10, 3], [10, 20]]], 0, 0, 0, 0]],
-          locals: [],
-          templates: []
-        };
-      })();
-      var child1 = (function () {
-        return {
-          meta: {
-            "revision": "Ember@2.8.3",
-            "loc": {
-              "source": null,
-              "start": {
-                "line": 20,
+                "line": 15,
                 "column": 2
               },
               "end": {
-                "line": 20,
+                "line": 15,
                 "column": 38
               }
             },
@@ -1212,6 +1184,50 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
           templates: []
         };
       })();
+      var child1 = (function () {
+        return {
+          meta: {
+            "revision": "Ember@2.8.3",
+            "loc": {
+              "source": null,
+              "start": {
+                "line": 17,
+                "column": 2
+              },
+              "end": {
+                "line": 19,
+                "column": 2
+              }
+            },
+            "moduleName": "wpda-client/templates/components/auth-bar.hbs"
+          },
+          isEmpty: false,
+          arity: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          buildFragment: function buildFragment(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("		");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("span");
+            dom.setAttribute(el1, "class", "text-danger bg-danger");
+            var el2 = dom.createComment("");
+            dom.appendChild(el1, el2);
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
+            var morphs = new Array(1);
+            morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 0, 0);
+            return morphs;
+          },
+          statements: [["content", "auth.errorMsg", ["loc", [null, [18, 38], [18, 55]]], 0, 0, 0, 0]],
+          locals: [],
+          templates: []
+        };
+      })();
       var child2 = (function () {
         return {
           meta: {
@@ -1219,11 +1235,11 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
             "loc": {
               "source": null,
               "start": {
-                "line": 24,
+                "line": 22,
                 "column": 0
               },
               "end": {
-                "line": 26,
+                "line": 24,
                 "column": 0
               }
             },
@@ -1263,7 +1279,7 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
               "column": 0
             },
             "end": {
-              "line": 27,
+              "line": 25,
               "column": 0
             }
           },
@@ -1281,11 +1297,7 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
           dom.appendChild(el0, el1);
           var el1 = dom.createElement("form");
           dom.setAttribute(el1, "class", "navbar-form");
-          var el2 = dom.createTextNode("\n");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createComment("");
-          dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("	");
+          var el2 = dom.createTextNode("\n	");
           dom.appendChild(el1, el2);
           var el2 = dom.createComment("");
           dom.appendChild(el1, el2);
@@ -1330,7 +1342,11 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
           var el3 = dom.createElement("a");
           dom.setAttribute(el3, "class", "glyphicon glyphicon-info-sign info-icon");
           dom.appendChild(el2, el3);
-          var el3 = dom.createTextNode("\n	");
+          var el3 = dom.createTextNode("\n");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createComment("");
+          dom.appendChild(el2, el3);
+          var el3 = dom.createTextNode("	");
           dom.appendChild(el2, el3);
           dom.appendChild(el1, el2);
           var el2 = dom.createTextNode("\n");
@@ -1344,22 +1360,22 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
         },
         buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
           var element0 = dom.childAt(fragment, [2]);
-          var element1 = dom.childAt(element0, [11]);
-          var element2 = dom.childAt(element0, [15]);
+          var element1 = dom.childAt(element0, [9]);
+          var element2 = dom.childAt(element0, [13]);
           var element3 = dom.childAt(element2, [3]);
           var morphs = new Array(8);
           morphs[0] = dom.createMorphAt(element0, 1, 1);
           morphs[1] = dom.createMorphAt(element0, 3, 3);
           morphs[2] = dom.createMorphAt(element0, 5, 5);
-          morphs[3] = dom.createMorphAt(element0, 7, 7);
-          morphs[4] = dom.createElementMorph(element1);
-          morphs[5] = dom.createMorphAt(element2, 1, 1);
-          morphs[6] = dom.createElementMorph(element3);
+          morphs[3] = dom.createElementMorph(element1);
+          morphs[4] = dom.createMorphAt(element2, 1, 1);
+          morphs[5] = dom.createElementMorph(element3);
+          morphs[6] = dom.createMorphAt(element2, 5, 5);
           morphs[7] = dom.createMorphAt(fragment, 4, 4, contextualElement);
           dom.insertBoundary(fragment, null);
           return morphs;
         },
-        statements: [["block", "if", [["get", "auth.errorMsg", ["loc", [null, [8, 7], [8, 20]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [8, 1], [12, 8]]]], ["inline", "input", [], ["type", "text", "class", "input form-control auth-field", "value", ["subexpr", "@mut", [["get", "auth.username", ["loc", [null, [13, 65], [13, 78]]], 0, 0, 0, 0]], [], [], 0, 0], "enter", "login", "placeholder", "Username"], ["loc", [null, [13, 1], [13, 117]]], 0, 0], ["inline", "input", [], ["type", "text", "class", "input form-control auth-field", "value", ["subexpr", "@mut", [["get", "auth.password", ["loc", [null, [14, 65], [14, 78]]], 0, 0, 0, 0]], [], [], 0, 0], "enter", "login", "placeholder", "Password", "type", "password"], ["loc", [null, [14, 1], [14, 133]]], 0, 0], ["inline", "input", [], ["class", "checkbox", "type", "checkbox", "checked", ["subexpr", "@mut", [["get", "auth.remember", ["loc", [null, [15, 50], [15, 63]]], 0, 0, 0, 0]], [], [], 0, 0], "name", "remember"], ["loc", [null, [15, 1], [15, 81]]], 0, 0], ["element", "action", ["login"], [], ["loc", [null, [17, 47], [17, 65]]], 0, 0], ["block", "link-to", ["register"], [], 1, null, ["loc", [null, [20, 2], [20, 50]]]], ["element", "action", ["showRegInfo"], [], ["loc", [null, [21, 53], [21, 77]]], 0, 0], ["block", "bs-modal", [], ["open", ["subexpr", "@mut", [["get", "showRegInfo", ["loc", [null, [24, 17], [24, 28]]], 0, 0, 0, 0]], [], [], 0, 0], "title", "Why register?", "footer", false], 2, null, ["loc", [null, [24, 0], [26, 13]]]]],
+        statements: [["inline", "input", [], ["type", "text", "class", "input form-control auth-field", "value", ["subexpr", "@mut", [["get", "auth.username", ["loc", [null, [8, 65], [8, 78]]], 0, 0, 0, 0]], [], [], 0, 0], "enter", "login", "placeholder", "Username"], ["loc", [null, [8, 1], [8, 117]]], 0, 0], ["inline", "input", [], ["type", "text", "class", "input form-control auth-field", "value", ["subexpr", "@mut", [["get", "auth.password", ["loc", [null, [9, 65], [9, 78]]], 0, 0, 0, 0]], [], [], 0, 0], "enter", "login", "placeholder", "Password", "type", "password"], ["loc", [null, [9, 1], [9, 133]]], 0, 0], ["inline", "input", [], ["class", "checkbox", "type", "checkbox", "checked", ["subexpr", "@mut", [["get", "auth.remember", ["loc", [null, [10, 50], [10, 63]]], 0, 0, 0, 0]], [], [], 0, 0], "name", "remember"], ["loc", [null, [10, 1], [10, 81]]], 0, 0], ["element", "action", ["login"], [], ["loc", [null, [12, 47], [12, 65]]], 0, 0], ["block", "link-to", ["register"], [], 0, null, ["loc", [null, [15, 2], [15, 50]]]], ["element", "action", ["showRegInfo"], [], ["loc", [null, [16, 53], [16, 77]]], 0, 0], ["block", "if", [["get", "auth.errorMsg", ["loc", [null, [17, 8], [17, 21]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [17, 2], [19, 9]]]], ["block", "bs-modal", [], ["open", ["subexpr", "@mut", [["get", "showRegInfo", ["loc", [null, [22, 17], [22, 28]]], 0, 0, 0, 0]], [], [], 0, 0], "title", "Why register?", "footer", false], 2, null, ["loc", [null, [22, 0], [24, 13]]]]],
         locals: [],
         templates: [child0, child1, child2]
       };
@@ -1374,7 +1390,7 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
             "column": 0
           },
           "end": {
-            "line": 28,
+            "line": 26,
             "column": 0
           }
         },
@@ -1397,7 +1413,7 @@ define("wpda-client/templates/components/auth-bar", ["exports"], function (expor
         dom.insertBoundary(fragment, null);
         return morphs;
       },
-      statements: [["block", "if", [["get", "auth.isLoggedIn", ["loc", [null, [1, 6], [1, 21]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [1, 0], [27, 7]]]]],
+      statements: [["block", "if", [["get", "auth.isLoggedIn", ["loc", [null, [1, 6], [1, 21]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [1, 0], [25, 7]]]]],
       locals: [],
       templates: [child0, child1]
     };
@@ -5136,11 +5152,11 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
           "loc": {
             "source": null,
             "start": {
-              "line": 4,
+              "line": 5,
               "column": 7
             },
             "end": {
-              "line": 4,
+              "line": 5,
               "column": 86
             }
           },
@@ -5171,11 +5187,11 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
           "loc": {
             "source": null,
             "start": {
-              "line": 14,
+              "line": 15,
               "column": 5
             },
             "end": {
-              "line": 16,
+              "line": 17,
               "column": 5
             }
           },
@@ -5208,7 +5224,7 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
           morphs[0] = dom.createElementMorph(element2);
           return morphs;
         },
-        statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [15, 26], [15, 56]]], 0, 0]],
+        statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [16, 26], [16, 56]]], 0, 0]],
         locals: [],
         templates: []
       };
@@ -5220,11 +5236,11 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
           "loc": {
             "source": null,
             "start": {
-              "line": 17,
+              "line": 18,
               "column": 5
             },
             "end": {
-              "line": 19,
+              "line": 20,
               "column": 5
             }
           },
@@ -5257,7 +5273,7 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
           morphs[0] = dom.createElementMorph(element1);
           return morphs;
         },
-        statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [18, 26], [18, 56]]], 0, 0]],
+        statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [19, 26], [19, 56]]], 0, 0]],
         locals: [],
         templates: []
       };
@@ -5270,11 +5286,11 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
             "loc": {
               "source": null,
               "start": {
-                "line": 21,
+                "line": 22,
                 "column": 6
               },
               "end": {
-                "line": 23,
+                "line": 24,
                 "column": 6
               }
             },
@@ -5307,7 +5323,7 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
             morphs[0] = dom.createElementMorph(element0);
             return morphs;
           },
-          statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [22, 27], [22, 57]]], 0, 0]],
+          statements: [["element", "bind-attr", [], ["href", "view.href"], ["loc", [null, [23, 27], [23, 57]]], 0, 0]],
           locals: [],
           templates: []
         };
@@ -5318,11 +5334,11 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
           "loc": {
             "source": null,
             "start": {
-              "line": 20,
+              "line": 21,
               "column": 5
             },
             "end": {
-              "line": 24,
+              "line": 25,
               "column": 5
             }
           },
@@ -5345,7 +5361,7 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
           dom.insertBoundary(fragment, null);
           return morphs;
         },
-        statements: [["block", "link-to", ["profile"], ["tagName", "li"], 0, null, ["loc", [null, [21, 6], [23, 18]]]]],
+        statements: [["block", "link-to", ["profile"], ["tagName", "li"], 0, null, ["loc", [null, [22, 6], [24, 18]]]]],
         locals: [],
         templates: [child0]
       };
@@ -5360,7 +5376,7 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
             "column": 0
           },
           "end": {
-            "line": 31,
+            "line": 32,
             "column": 0
           }
         },
@@ -5378,7 +5394,7 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
         dom.appendChild(el1, el2);
         var el2 = dom.createElement("div");
         dom.setAttribute(el2, "class", "container");
-        var el3 = dom.createTextNode("\n		");
+        var el3 = dom.createTextNode("\n\n		");
         dom.appendChild(el2, el3);
         var el3 = dom.createElement("div");
         dom.setAttribute(el3, "class", "navbar-header");
@@ -5456,7 +5472,7 @@ define("wpda-client/templates/components/nav-bar", ["exports"], function (export
         morphs[4] = dom.createMorphAt(element4, 5, 5);
         return morphs;
       },
-      statements: [["block", "link-to", ["application"], ["class", "navbar-brand"], 0, null, ["loc", [null, [4, 7], [4, 98]]]], ["content", "auth-bar", ["loc", [null, [7, 3], [7, 15]]], 0, 0, 0, 0], ["block", "link-to", ["application"], ["tagName", "li"], 1, null, ["loc", [null, [14, 5], [16, 17]]]], ["block", "link-to", ["watch-place"], ["tagName", "li"], 2, null, ["loc", [null, [17, 5], [19, 17]]]], ["block", "if", [["get", "auth.isLoggedIn", ["loc", [null, [20, 11], [20, 26]]], 0, 0, 0, 0]], [], 3, null, ["loc", [null, [20, 5], [24, 12]]]]],
+      statements: [["block", "link-to", ["application"], ["class", "navbar-brand"], 0, null, ["loc", [null, [5, 7], [5, 98]]]], ["content", "auth-bar", ["loc", [null, [8, 3], [8, 15]]], 0, 0, 0, 0], ["block", "link-to", ["application"], ["tagName", "li"], 1, null, ["loc", [null, [15, 5], [17, 17]]]], ["block", "link-to", ["watch-place"], ["tagName", "li"], 2, null, ["loc", [null, [18, 5], [20, 17]]]], ["block", "if", [["get", "auth.isLoggedIn", ["loc", [null, [21, 11], [21, 26]]], 0, 0, 0, 0]], [], 3, null, ["loc", [null, [21, 5], [25, 12]]]]],
       locals: [],
       templates: [child0, child1, child2, child3]
     };
@@ -6727,7 +6743,7 @@ define("wpda-client/templates/profile", ["exports"], function (exports) {
             "column": 0
           },
           "end": {
-            "line": 2,
+            "line": 3,
             "column": 0
           }
         },
@@ -6739,7 +6755,15 @@ define("wpda-client/templates/profile", ["exports"], function (exports) {
       hasRendered: false,
       buildFragment: function buildFragment(dom) {
         var el0 = dom.createDocumentFragment();
-        var el1 = dom.createComment("");
+        var el1 = dom.createElement("h2");
+        var el2 = dom.createComment("");
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("p");
+        var el2 = dom.createTextNode("Wouldn't it be nice to see something here?");
+        dom.appendChild(el1, el2);
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n");
         dom.appendChild(el0, el1);
@@ -6747,11 +6771,10 @@ define("wpda-client/templates/profile", ["exports"], function (exports) {
       },
       buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
         var morphs = new Array(1);
-        morphs[0] = dom.createMorphAt(fragment, 0, 0, contextualElement);
-        dom.insertBoundary(fragment, 0);
+        morphs[0] = dom.createMorphAt(dom.childAt(fragment, [0]), 0, 0);
         return morphs;
       },
-      statements: [["content", "outlet", ["loc", [null, [1, 0], [1, 10]]], 0, 0, 0, 0]],
+      statements: [["content", "auth.user.username", ["loc", [null, [1, 4], [1, 26]]], 0, 0, 0, 0]],
       locals: [],
       templates: []
     };
@@ -7046,7 +7069,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
                   "column": 7
                 },
                 "end": {
-                  "line": 61,
+                  "line": 60,
                   "column": 7
                 }
               },
@@ -7062,7 +7085,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
               dom.appendChild(el0, el1);
               var el1 = dom.createComment("");
               dom.appendChild(el0, el1);
-              var el1 = dom.createTextNode("\n\n");
+              var el1 = dom.createTextNode("\n");
               dom.appendChild(el0, el1);
               return el0;
             },
@@ -7086,7 +7109,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
                 "column": 6
               },
               "end": {
-                "line": 62,
+                "line": 61,
                 "column": 6
               }
             },
@@ -7115,7 +7138,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
             dom.insertBoundary(fragment, null);
             return morphs;
           },
-          statements: [["block", "xs.option", [], ["disabled", true, "selected", true], 0, null, ["loc", [null, [57, 7], [57, 74]]]], ["block", "each", [["get", "rank", ["loc", [null, [58, 15], [58, 19]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [58, 7], [61, 16]]]]],
+          statements: [["block", "xs.option", [], ["disabled", true, "selected", true], 0, null, ["loc", [null, [57, 7], [57, 74]]]], ["block", "each", [["get", "rank", ["loc", [null, [58, 15], [58, 19]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [58, 7], [60, 16]]]]],
           locals: ["xs"],
           templates: [child0, child1]
         };
@@ -7127,11 +7150,11 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
             "loc": {
               "source": null,
               "start": {
-                "line": 70,
+                "line": 68,
                 "column": 6
               },
               "end": {
-                "line": 72,
+                "line": 70,
                 "column": 6
               }
             },
@@ -7168,11 +7191,11 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
             "loc": {
               "source": null,
               "start": {
-                "line": 85,
+                "line": 83,
                 "column": 5
               },
               "end": {
-                "line": 90,
+                "line": 88,
                 "column": 5
               }
             },
@@ -7204,7 +7227,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
             morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1]), 1, 1);
             return morphs;
           },
-          statements: [["content", "validationErrorMsg", ["loc", [null, [87, 7], [87, 29]]], 0, 0, 0, 0]],
+          statements: [["content", "validationErrorMsg", ["loc", [null, [85, 7], [85, 29]]], 0, 0, 0, 0]],
           locals: [],
           templates: []
         };
@@ -7219,7 +7242,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
               "column": 0
             },
             "end": {
-              "line": 95,
+              "line": 93,
               "column": 0
             }
           },
@@ -7428,7 +7451,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
           dom.appendChild(el5, el6);
           var el6 = dom.createComment("");
           dom.appendChild(el5, el6);
-          var el6 = dom.createTextNode("\n\n					");
+          var el6 = dom.createTextNode("\n					");
           dom.appendChild(el5, el6);
           dom.appendChild(el4, el5);
           var el5 = dom.createTextNode("\n\n				");
@@ -7484,7 +7507,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
           var el6 = dom.createElement("button");
           dom.setAttribute(el6, "type", "button");
           dom.setAttribute(el6, "class", "btn btn-block btn-default");
-          var el7 = dom.createTextNode("Sign Up for democlient");
+          var el7 = dom.createTextNode("Register");
           dom.appendChild(el6, el7);
           dom.appendChild(el5, el6);
           var el6 = dom.createTextNode("\n					");
@@ -7548,7 +7571,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
           morphs[15] = dom.createMorphAt(dom.childAt(element0, [17]), 1, 1);
           return morphs;
         },
-        statements: [["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.username", ["loc", [null, [10, 32], [10, 53]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Username"], ["loc", [null, [10, 6], [10, 132]]], 0, 0], ["block", "if", [["get", "usernameerror", ["loc", [null, [12, 11], [12, 24]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [12, 5], [16, 12]]]], ["attribute", "class", ["concat", ["col-sm-4 ", ["get", "emailclasses", ["loc", [null, [20, 28], [20, 40]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.email", ["loc", [null, [21, 32], [21, 50]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Email"], ["loc", [null, [21, 6], [21, 126]]], 0, 0], ["block", "if", [["get", "emailerror", ["loc", [null, [23, 11], [23, 21]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [23, 5], [27, 12]]]], ["attribute", "class", ["concat", ["col-sm-4 ", ["get", "passwordclasses", ["loc", [null, [31, 28], [31, 43]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.password", ["loc", [null, [32, 32], [32, 53]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Password", "type", "password"], ["loc", [null, [32, 6], [32, 148]]], 0, 0], ["block", "if", [["get", "passworderror", ["loc", [null, [34, 11], [34, 24]]], 0, 0, 0, 0]], [], 2, null, ["loc", [null, [34, 5], [38, 12]]]], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "confirmpassword", ["loc", [null, [43, 32], [43, 47]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Confirm password", "type", "password"], ["loc", [null, [43, 6], [43, 150]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.profile.wazeName", ["loc", [null, [49, 32], [49, 56]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Waze username"], ["loc", [null, [49, 6], [49, 140]]], 0, 0], ["block", "x-select", [], ["class", "form-control reg-input-field", "value", ["subexpr", "@mut", [["get", "content.profile.wazeRank", ["loc", [null, [56, 61], [56, 85]]], 0, 0, 0, 0]], [], [], 0, 0]], 3, null, ["loc", [null, [56, 6], [62, 19]]]], ["block", "bs-modal", [], ["open", ["subexpr", "@mut", [["get", "showPolicy", ["loc", [null, [70, 23], [70, 33]]], 0, 0, 0, 0]], [], [], 0, 0], "title", "Privacy Policy", "footer", false], 4, null, ["loc", [null, [70, 6], [72, 19]]]], ["element", "action", ["showPolicy"], [], ["loc", [null, [73, 62], [73, 85]]], 0, 0], ["inline", "input", [], ["type", "checkbox", "name", "doesAgree", "checked", ["subexpr", "@mut", [["get", "agree", ["loc", [null, [75, 56], [75, 61]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [75, 7], [75, 63]]], 0, 0], ["element", "action", ["register"], [], ["loc", [null, [81, 62], [81, 83]]], 0, 0], ["block", "if", [["get", "validationErrorMsg", ["loc", [null, [85, 11], [85, 29]]], 0, 0, 0, 0]], [], 5, null, ["loc", [null, [85, 5], [90, 12]]]]],
+        statements: [["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.username", ["loc", [null, [10, 32], [10, 53]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Username"], ["loc", [null, [10, 6], [10, 132]]], 0, 0], ["block", "if", [["get", "usernameerror", ["loc", [null, [12, 11], [12, 24]]], 0, 0, 0, 0]], [], 0, null, ["loc", [null, [12, 5], [16, 12]]]], ["attribute", "class", ["concat", ["col-sm-4 ", ["get", "emailclasses", ["loc", [null, [20, 28], [20, 40]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.email", ["loc", [null, [21, 32], [21, 50]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Email"], ["loc", [null, [21, 6], [21, 126]]], 0, 0], ["block", "if", [["get", "emailerror", ["loc", [null, [23, 11], [23, 21]]], 0, 0, 0, 0]], [], 1, null, ["loc", [null, [23, 5], [27, 12]]]], ["attribute", "class", ["concat", ["col-sm-4 ", ["get", "passwordclasses", ["loc", [null, [31, 28], [31, 43]]], 0, 0, 0, 0]], 0, 0, 0, 0, 0], 0, 0, 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.user.password", ["loc", [null, [32, 32], [32, 53]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Password", "type", "password"], ["loc", [null, [32, 6], [32, 148]]], 0, 0], ["block", "if", [["get", "passworderror", ["loc", [null, [34, 11], [34, 24]]], 0, 0, 0, 0]], [], 2, null, ["loc", [null, [34, 5], [38, 12]]]], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "confirmpassword", ["loc", [null, [43, 32], [43, 47]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Confirm password", "type", "password"], ["loc", [null, [43, 6], [43, 150]]], 0, 0], ["inline", "input", [], ["type", "text", "value", ["subexpr", "@mut", [["get", "content.profile.wazeName", ["loc", [null, [49, 32], [49, 56]]], 0, 0, 0, 0]], [], [], 0, 0], "class", "form-control reg-input-field", "enter", "register", "placeholder", "Waze username"], ["loc", [null, [49, 6], [49, 140]]], 0, 0], ["block", "x-select", [], ["class", "form-control reg-input-field", "value", ["subexpr", "@mut", [["get", "content.profile.wazeRank", ["loc", [null, [56, 61], [56, 85]]], 0, 0, 0, 0]], [], [], 0, 0]], 3, null, ["loc", [null, [56, 6], [61, 19]]]], ["block", "bs-modal", [], ["open", ["subexpr", "@mut", [["get", "showPolicy", ["loc", [null, [68, 23], [68, 33]]], 0, 0, 0, 0]], [], [], 0, 0], "title", "Privacy Policy", "footer", false], 4, null, ["loc", [null, [68, 6], [70, 19]]]], ["element", "action", ["showPolicy"], [], ["loc", [null, [71, 62], [71, 85]]], 0, 0], ["inline", "input", [], ["type", "checkbox", "name", "doesAgree", "checked", ["subexpr", "@mut", [["get", "agree", ["loc", [null, [73, 56], [73, 61]]], 0, 0, 0, 0]], [], [], 0, 0]], ["loc", [null, [73, 7], [73, 63]]], 0, 0], ["element", "action", ["register"], [], ["loc", [null, [79, 62], [79, 83]]], 0, 0], ["block", "if", [["get", "validationErrorMsg", ["loc", [null, [83, 11], [83, 29]]], 0, 0, 0, 0]], [], 5, null, ["loc", [null, [83, 5], [88, 12]]]]],
         locals: [],
         templates: [child0, child1, child2, child3, child4, child5]
       };
@@ -7563,7 +7586,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
             "column": 0
           },
           "end": {
-            "line": 96,
+            "line": 94,
             "column": 0
           }
         },
@@ -7586,7 +7609,7 @@ define("wpda-client/templates/register", ["exports"], function (exports) {
         dom.insertBoundary(fragment, null);
         return morphs;
       },
-      statements: [["block", "if", [["get", "success", ["loc", [null, [1, 6], [1, 13]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [1, 0], [95, 7]]]]],
+      statements: [["block", "if", [["get", "success", ["loc", [null, [1, 6], [1, 13]]], 0, 0, 0, 0]], [], 0, 1, ["loc", [null, [1, 0], [93, 7]]]]],
       locals: [],
       templates: [child0, child1]
     };
@@ -7707,7 +7730,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+ee34903b"});
+  require("wpda-client/app")["default"].create({"name":"wpda-client","version":"0.1.0+f9267b01"});
 }
 
 /* jshint ignore:end */
